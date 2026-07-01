@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Монитор Эксперт Автономный ИИ</title>
     
-    <!-- Подключаем автономный ИИ модуль распознавания текста, который стабильно работает без блокировок -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- Подключаем ИИ через стабильное зеркало cdnjs, которое не блокируется провайдерами РФ -->
+    <script src="https://cloudflare.com" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <style>
         /* Telegram Dark Theme */
@@ -109,19 +109,16 @@
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
-            box-shadow: inset 0 0 0 40px rgba(0, 0, 0, 0.6); /* Затемнение фона вокруг центра */
+            box-shadow: inset 0 0 0 40px rgba(0, 0, 0, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
+        /* Узкая рамка-полоса под ширину одной строки */
         .crop-frame {
-    width: calc(100% - 80px);    /* Ширина остается широкой */
-    height: calc(100% - 220px);  /* Увеличиваем отступ, чтобы рамка стала узкой полоской */
-    border: 2px dashed var(--button-bg);
-    border-radius: 4px;
-    box-shadow: 0 0 10px rgba(47, 110, 165, 0.5);
-    position: relative;
+            width: calc(100% - 80px);
+            height: calc(100% - 220px);
             border: 2px dashed var(--button-bg);
             border-radius: 4px;
             box-shadow: 0 0 10px rgba(47, 110, 165, 0.5);
@@ -130,7 +127,7 @@
 
         /* Метка по центру прицела */
         .crop-frame::before {
-            content: "ПОМЕСТИТЕ ТЕКСТ СЮДА";
+            content: "ПОМЕСТИТЕ СТРОКУ СЮДА";
             position: absolute;
             bottom: -25px; left: 50%;
             transform: translateX(-50%);
@@ -235,7 +232,7 @@
     <div id="screen-card" class="screen">
         <h2>Параметры монитора</h2>
         <p style="color: var(--success-color); text-align:center; margin-bottom:15px; font-size:13px;">
-            ✨ Данные считаны и кадрированы. Проверьте их.
+            ✨ Проверьте или отредактируйте параметры вручную.
         </p>
         
         <div class="form-group">
@@ -292,7 +289,7 @@
 <script>
     let currentStream = null;
 
-    // Структура черновика для букв и цифр
+    // Глобальная переменная для черновика объявлена первой
     let tempMonitorData = {
         serial: '',
         brand: '',
@@ -362,16 +359,15 @@
         startCamera('camera-video');
     }
 
-    // Функция точной обрезки изображения по размерам рамки-прицела
+    // Функция точной обрезки изображения по размерам узкой рамки-прицела
     function cropImageFromVideo(videoElement, canvasElement) {
         const context = canvasElement.getContext('2d');
         
-        // Получаем реальные размеры видеопотока
         const videoWidth = videoElement.videoWidth;
         const videoHeight = videoElement.videoHeight;
 
-        // Рассчитываем пропорции рамки (в стилях: отступы по 40px слева/справа и по 60px сверху/снизу)
-        // Обрезаем центральную область кадра, отсекая текстовый шум по краям
+        // Согласуем математику с нашими узкими CSS стилями
+        // Ширина — 75% от кадра, Высота — всего 20% от кадра (узкая полоска по центру)
         const cropWidth = videoWidth * 0.75;
         const cropHeight = videoHeight * 0.20;
         const cropX = (videoWidth - cropWidth) / 2;
@@ -380,7 +376,6 @@
         canvasElement.width = cropWidth;
         canvasElement.height = cropHeight;
 
-        // Вырезаем нужный кусок из видео и переносим на скрытый холст
         context.drawImage(
             videoElement, 
             cropX, cropY, cropWidth, cropHeight, 
@@ -389,7 +384,15 @@
 
         return canvasElement.toDataURL('image/jpeg', 0.9);
     }
-        // ОПТИМИЗИРОВАННАЯ ФУНКЦИЯ: Быстрый захват кадра и ИИ-обработка
+
+    // Вспомогательное открытие карточки (теперь функция жестко привязана к глобальному контексту)
+    window.openCardEditor = function() {
+        document.getElementById('monitor-brand').value = tempMonitorData.brand || "";
+        document.getElementById('monitor-model').value = tempMonitorData.model || "";
+        document.getElementById('monitor-serial').value = tempMonitorData.serial || "";
+        showScreen('screen-card');
+    };
+    // Универсальная функция захвата кадра и ИИ-обработки шага
     async function captureAndProcessStep(type) {
         const isSerial = (type === 'serial');
         const video = document.getElementById(isSerial ? 'barcode-video' : 'camera-video');
@@ -404,20 +407,33 @@
             return;
         }
 
-        // Обрезаем только ту часть изображения, которая попала в прицел рамки
+        // Вырезаем узкую полосу по рамке
         const croppedImageBase64 = cropImageFromVideo(video, canvas);
 
-        // Гасим камеру и включаем анимацию ИИ-анализа
+        // Отключаем камеру и запускаем индикацию
         stopCamera();
         wrapper.style.display = 'none';
         btn.style.display = 'none';
         loader.style.display = 'block';
-        loaderText.innerText = "ИИ считывает символы... (Обычно 2-3 сек)";
+        loaderText.innerText = "ИИ распознает текст... (3-5 сек)";
+
+        // КРИТИЧЕСКАЯ ЗАЩИТА: Если провайдер заблокировал сеть и библиотеки ИИ нет в браузере
+        if (typeof Tesseract === 'undefined' || !Tesseract.recognize) {
+            console.error("Критическая ошибка: Библиотека Tesseract ИИ не загружена из-за блокировки сети.");
+            alert("⚠️ Модуль ИИ недоступен (сетевая блокировка). Переходим к заполнению карточки вручную.");
+            
+            if (isSerial) {
+                tempMonitorData.serial = "";
+                startModelCamera(); // Идем на второй шаг съемки
+            } else {
+                openCardEditor(); // Открываем форму
+            }
+            return;
+        }
 
         try {
-            // Создаем легковесный ИИ-воркер Tesseract
-            const worker = await Tesseract.createWorker({
-                cacheMethod: 'readOnly', // Запрещаем скачивать лишнее из сети
+            // Быстрый запуск автономного ядра на английском языке
+            const result = await Tesseract.recognize(croppedImageBase64, 'eng', {
                 logger: m => {
                     if (m.status === 'recognizing') {
                         loaderText.innerText = `Анализ текста: ${Math.floor(m.progress * 100)}%`;
@@ -425,45 +441,22 @@
                 }
             });
 
-            // Настраиваем ИИ только на английские буквы и цифры (убираем тяжелые словари)
-            await worker.loadLanguage('eng');
-            await worker.initialize('eng');
-            
-            // Включаем супер-быстрый режим распознавания отдельных символов без разбора грамматики
-            await worker.setParameters({
-                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK, // Анализируем как один блок текста
-                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_/:' // Распознаем только эти знаки
-            });
-
-            // Запускаем моментальное распознавание по вырезанной картинке
-            const { data: { text } } = await worker.recognize(croppedImageBase64);
-            await worker.terminate(); // Сразу выгружаем ИИ из памяти телефона, чтобы он не тормозил
-
-            console.log(`[ИИ Успех] Считано с кадра (${type}):\n`, text);
+            const recognizedText = result.data.text;
+            console.log(`[ИИ Успех] Считано (${type}):\n`, recognizedText);
 
             if (isSerial) {
-                // Извлекаем и чистим серийный номер от пробелов и мусора
-                tempMonitorData.serial = cleanTextForData(text, 'serial');
-                // Переходим ко второму шагу — съемке модели монитора
+                tempMonitorData.serial = cleanTextForData(recognizedText, 'serial');
                 startModelCamera();
             } else {
-                // Извлекаем модель и производителя со второй картинки
-                parseMonitorText(text);
-                
-                // Передаем все ИИ данные в итоговую форму-карточку
-                document.getElementById('monitor-brand').value = tempMonitorData.brand || "";
-                document.getElementById('monitor-model').value = tempMonitorData.model || "";
-                document.getElementById('monitor-serial').value = tempMonitorData.serial || "Не считан";
-                
-                showScreen('screen-card');
+                parseMonitorText(recognizedText);
+                openCardEditor();
             }
 
         } catch (ocrError) {
             console.error("Ошибка ИИ-анализа: ", ocrError);
-            alert("Не удалось разобрать символы автоматически. Введите данные вручную в карточке.");
-            // Вместо зависания сразу пускаем пользователя в редактор
+            alert("Не удалось считать текст автоматически. Заполните карточку вручную.");
             if (isSerial) {
-                tempMonitorData.serial = "Ошибка сканирования";
+                tempMonitorData.serial = "";
                 startModelCamera();
             } else {
                 openCardEditor();
@@ -471,7 +464,7 @@
         }
     }
 
-    // Очистка и фильтрация текста под стандарты серийников и моделей
+    // Фильтрация и очистка текста под форматы серийников
     function cleanTextForData(text, mode) {
         if (!text) return '';
         let clean = text.replace(/[\r\n\t]/g, ' ').trim();
@@ -491,7 +484,7 @@
         return clean;
     }
 
-    // Алгоритм разбора наклейки параметров (Бренд и Модель)
+    // Извлечение бренда и модели
     function parseMonitorText(text) {
         if (!text) return;
         const clean = text.replace(/[\r\n]/g, ' ');
@@ -502,7 +495,7 @@
         for (let b of brands) {
             if (upperText.includes(b)) { foundBrand = b; break; }
         }
-        tempMonitorData.brand = foundBrand || "Не определен";
+        tempMonitorData.brand = foundBrand || "";
 
         let foundModel = '';
         const modelMatch = text.match(/(?:MODEL|M\/N|MODEL NO)[:\s]+([A-Z0-9\-_]{4,15})/i);
@@ -518,7 +511,7 @@
                 }
             }
         }
-        tempMonitorData.model = foundModel.toUpperCase() || "Не определена";
+        tempMonitorData.model = foundModel.toUpperCase() || "";
     }
 
     // --- БАЗА ДАННЫХ И ЭКСПОРТ ---
@@ -528,7 +521,7 @@
         const serial = document.getElementById('monitor-serial').value.trim();
 
         if (!brand || !model || !serial) {
-            alert("Заполните все три поля перед сохранением!");
+            alert("Заполните поля производителя, модели и серийного номера перед сохранением!");
             return;
         }
 
@@ -536,7 +529,7 @@
         db.unshift({ brand, model, serial });
         localStorage.setItem('monitors_db', JSON.stringify(db));
 
-        alert("Карточка успешно добавлена в базу!");
+        alert("Карточка сохранена!");
         goToMain();
     }
 
@@ -568,7 +561,7 @@
     }
 
     function deleteMonitor(index) {
-        if (confirm("Удалить выбранный монитор из базы?")) {
+        if (confirm("Удалить карточку монитора?")) {
             let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
             db.splice(index, 1);
             localStorage.setItem('monitors_db', JSON.stringify(db));
@@ -577,7 +570,7 @@
     }
 
     function clearDatabase() {
-        if (confirm("Вы уверены, что хотите ПОЛНОСТЬЮ стереть всю базу данных мониторов?")) {
+        if (confirm("Вы уверены, что хотите полностью стереть всю базу данных?")) {
             localStorage.removeItem('monitors_db');
             renderTable();
         }
@@ -606,4 +599,3 @@
 </script>
 </body>
 </html>
-
