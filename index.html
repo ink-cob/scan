@@ -3,394 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Dark OCR Scanner v3</title>
-    <!-- Подключаем стабильную версию Tesseract.js через CDN -->
+    <title>Инвентарь</title>
     <script src="https://jsdelivr.net"></script>
-    <style>
-        :root {
-            --bg-color: #182533;
-            --panel-bg: #202b36;
-            --text-color: #f5f5f5;
-            --text-muted: #7e8b99;
-            --accent-color: #2b71b1;
-            --accent-hover: #3a82c4;
-            --danger-color: #e53935;
-            --danger-hover: #d32f2f;
-            --border-color: #101921;
-            --edit-bg: #243547;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 800px;
-        }
-
-        h1 {
-            font-size: 22px;
-            margin-bottom: 15px;
-            color: #fff;
-            text-align: center;
-        }
-
-        .card {
-            background: var(--panel-bg);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-
-        .step-title {
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: var(--text-color);
-            font-size: 16px;
-        }
-        .btn {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            transition: background 0.2s;
-            width: 100%;
-        }
-
-        .btn:hover { background-color: var(--accent-hover); }
-        .btn-danger { background-color: var(--danger-color); }
-        .btn-danger:hover { background-color: var(--danger-hover); }
-        .btn:disabled { background-color: var(--text-muted); cursor: not-allowed; }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            margin: 15px auto;
-            border-radius: 8px;
-            overflow: hidden;
-            display: none;
-            background: #000;
-        }
-
-        video {
-            width: 100%;
-            display: block;
-        }
-
-        .scanner-laser {
-            position: absolute;
-            top: 50%;
-            left: 5%;
-            width: 90%;
-            height: 50px;
-            transform: translateY(-50%);
-            border: 2px solid #2b71b1;
-            box-shadow: 0 0 15px rgba(43, 113, 177, 0.7);
-            border-radius: 4px;
-            pointer-events: none;
-            box-sizing: border-box;
-        }
-
-        .scanner-laser::before {
-            content: "ПОМЕСТИТЕ ТЕКСТ СЮДА";
-            position: absolute;
-            top: -20px;
-            left: 0;
-            font-size: 10px;
-            color: #2b71b1;
-            letter-spacing: 1px;
-            font-weight: bold;
-        }
-
-        .choice-buttons { display: flex; gap: 10px; margin-top: 15px; }
-        
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        /* Поле ввода для оперативной корректировки */
-        .edit-input {
-            background-color: var(--edit-bg) !important;
-            border: 1px solid var(--accent-color) !important;
-            font-weight: bold;
-            letter-spacing: 1px;
-            margin: 10px 0;
-        }
-
-        .table-container { overflow-x: auto; margin-top: 10px; }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #ffffff;
-            color: #000000;
-            border: 1px solid #cccccc;
-        }
-
-        th, td {
-            border: 1px solid #cccccc;
-            padding: 10px;
-            text-align: left;
-            font-family: "Arial", sans-serif;
-            font-size: 14px;
-        }
-
-        th { background-color: #f2f2f2; font-weight: bold; }
-        .table-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; gap: 10px; }
-        .status { color: var(--text-muted); font-size: 13px; }
-        canvas { display: none; }
-    </style>
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
 </head>
-<body>
+<body class="bg-[#17212b] text-[#f5f5f5] p-4 font-sans">
 
-<div class="container">
-    <h1>Telegram Data Scanner v3</h1>
+    <div id="app" class="max-w-md mx-auto bg-[#1e2c3a] p-4 rounded-xl border border-[#202b36] shadow-xl">
+        <div class="flex justify-between items-center mb-4 text-[#8aa1b5] text-sm">
+            <span class="font-bold text-[#5288c1]">🖥️ Инвентаризация</span>
+            <button v-if="list.length" @click="exportDoc" class="text-[#5288c1] font-semibold hover:underline">Скачать Word ({{list.length}})</button>
+        </div>
 
-    <div class="card" id="workflow-card">
-        <div class="step-title" id="step-header">Шаг 1: Первое фото (Модель или Серия)</div>
-        
-        <div id="action-area">
-            <button class="btn" id="start-camera-btn">Включить камеру</button>
-            
-            <div class="video-container" id="video-box">
-                <video id="webcam" autoplay playsinline></video>
-                <div class="scanner-laser"></div>
-                <button class="btn" id="snap-btn" style="position:absolute; bottom:10px; left:5%; width:90%;">Сделать снимок полоски</button>
-            </div>
+        <form @submit.prevent="add" class="space-y-3 mb-4">
+            <input v-model="f.b" placeholder="Производитель" required class="w-full bg-[#17212b] p-2 rounded text-sm border border-[#2f3e4e] focus:outline-none">
+            <input v-model="f.m" placeholder="Модель" required class="w-full bg-[#17212b] p-2 rounded text-sm border border-[#2f3e4e] focus:outline-none">
+            <input v-model="f.s" placeholder="Серийный номер" required class="w-full bg-[#17212b] p-2 rounded text-sm border border-[#2f3e4e] focus:outline-none">
+            <button type="submit" class="w-full bg-[#5288c1] p-2 rounded text-sm font-semibold hover:bg-[#4374a5]">Добавить в список</button>
+        </form>
 
-            <div id="ocr-status" class="status" style="margin-top:10px; text-align:center;"></div>
-
-            <!-- Интерактивная зона Шага 1 с полем редактирования -->
-            <div id="question-box" style="display:none; margin-top:15px;">
-                <p>Проверьте и скорректируйте текст, если нужно:</p>
-                <input type="text" id="edit-text-input" class="edit-input" autocomplete="off">
-                <p>Что это за цифры?</p>
-                <div class="choice-buttons">
-                    <button class="btn" onclick="saveFirstData('model')">Модель</button>
-                    <button class="btn" onclick="saveFirstData('serial')">Серийный номер</button>
-                </div>
-            </div>
-
-            <!-- Интерактивная зона Шага 2 с полем редактирования -->
-            <div id="step2-confirm-box" style="display:none; margin-top:15px;">
-                <p>Проверьте и скорректируйте второй текст:</p>
-                <input type="text" id="edit-text-input2" class="edit-input" autocomplete="off">
-                <button class="btn" id="confirm-step2-btn" style="margin-top:10px;">Подтвердить и перейти к производителю</button>
-            </div>
-
-            <!-- Ввод производителя -->
-            <div id="manufacturer-box" style="display:none; margin-top:15px;">
-                <p>Данные готовы! Укажите производителя:</p>
-                <input type="text" id="vendor-input" placeholder="Например: Samsung, ASUS..." autocomplete="off">
-                <button class="btn" id="save-row-btn" style="margin-top:12px;">Добавить в таблицу</button>
-            </div>
+        <div v-for="(item, i) in list" :key="i" class="flex justify-between items-center bg-[#17212b] p-2 rounded text-xs mb-1">
+            <div>{{i+1}}. <span class="text-[#5288c1] font-bold">{{item.b}}</span> {{item.m}} <span class="text-[#8aa1b5] font-mono">[{{item.s}}]</span></div>
+            <button @click="del(i)" class="text-[#e53935] ml-2 hover:underline">Х</button>
         </div>
     </div>
 
-    <div class="card">
-        <div class="step-title">Полученные данные</div>
-        <div class="table-container">
-            <table id="data-table">
-                <thead>
-                    <tr>
-                        <th>Номер</th>
-                        <th>Модель</th>
-                        <th>Серия</th>
-                        <th>Производитель</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <div class="table-actions">
-            <div class="status">Ctrl+C для копирования в Word.</div>
-            <button class="btn btn-danger" id="clear-table-btn" style="width:auto;">Удалить таблицу</button>
-        </div>
-    </div>
-</div>
+    <script>
+        const { createApp, ref } = Vue;
+        createApp({
+            setup() {
+                const list = ref(JSON.parse(localStorage.getItem('inv') || '[]'));
+                const f = ref({ b: '', m: '', s: '' });
 
-<canvas id="capture-canvas"></canvas>
+                const add = () => {
+                    list.value.push({ ...f.value });
+                    localStorage.setItem('inv', JSON.stringify(list.value));
+                    f.value = { b: '', m: '', s: '' };
+                };
 
-<script>
-    let currentStep = 1;
-    let tempModel = "";
-    let tempSerial = "";
-    let rowCounter = 1;
+                const del = (i) => {
+                    list.value.splice(i, 1);
+                    localStorage.setItem('inv', JSON.stringify(list.value));
+                };
 
-    const video = document.getElementById('webcam');
-    const canvas = document.getElementById('capture-canvas');
-    const startCamBtn = document.getElementById('start-camera-btn');
-    const videoBox = document.getElementById('video-box');
-    const snapBtn = document.getElementById('snap-btn');
-    const ocrStatus = document.getElementById('ocr-status');
-    const questionBox = document.getElementById('question-box');
-    const editText // разрыв для разделения
-    const editTextSpec = document.getElementById('edit-text-input');
-    const step2ConfirmBox = document.getElementById('step2-confirm-box');
-    const editTextSpec2 = document.getElementById('edit-text-input2');
-    const confirmStep2Btn = document.getElementById('confirm-step2-btn');
-    const stepHeader = document.getElementById('step-header');
-    const manufacturerBox = document.getElementById('manufacturer-box');
-    const vendorInput = document.getElementById('vendor-input');
-    const saveRowBtn = document.getElementById('save-row-btn');
-    const dataTableBody = document.querySelector('#data-table tbody');
-    const clearTableBtn = document.getElementById('clear-table-btn');
+                const exportDoc = () => {
+                    const rows = [new docx.TableRow({ children: ["№", "Бренд", "Модель", "S/N"].map(t => new docx.TableCell({ children: [new docx.Paragraph({ text: t, bold: true })] })) })];
+                    list.value.forEach((m, idx) => {
+                        rows.push(new docx.TableRow({ children: [String(idx + 1), m.b, m.m, m.s].map(t => new docx.TableCell({ children: [new docx.Paragraph({ text: t })] })) }));
+                    });
+                    const doc = new docx.Document({ sections: [{ children: [new docx.Table({ rows, width: { size: 100, type: docx.WidthType.PERCENTAGE } })] }] });
+                    window.docx.Packer.toBlob(doc).then(blob => {
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = "inventory.docx";
+                        a.click();
+                    });
+                };
 
-    let stream = null;
-
-    startCamBtn.addEventListener('click', async () => {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, 
-                audio: false 
-            });
-            video.srcObject = stream;
-            videoBox.style.display = 'block';
-            startCamBtn.style.display = 'none';
-            ocrStatus.innerText = "Наведите рамку строго на нужную строчку.";
-        } catch (err) {
-            alert("Ошибка доступа к камере.");
-        }
-    });
-
-    snapBtn.addEventListener('click', async () => {
-        if (!stream) return;
-        
-        ocrStatus.innerText = "Вырезание фрагмента и обработка...";
-        snapBtn.disabled = true;
-
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
-        
-        const cropHeight = Math.floor(videoHeight * 0.12); 
-        const cropWidth = Math.floor(videoWidth * 0.90);
-        const cropX = Math.floor((videoWidth - cropWidth) / 2);
-        const cropY = Math.floor((videoHeight - cropHeight) / 2);
-
-        canvas.width = cropWidth;
-        canvas.height = cropHeight;
-        const ctx = canvas.getContext('2d');
-        
-        ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-        
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imgData.data;
-        for (let i = 0; i < data.length; i += 4) {
-            let brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
-            let threshold = 120; 
-            let color = brightness > threshold ? 255 : 0;
-            data[i] = data[i+1] = data[i+2] = color;
-        }
-        ctx.putImageData(imgData, 0, 0);
-
-        ocrStatus.innerText = "Распознавание текста (OCR)...";
-
-        try {
-            const result = await Tesseract.recognize(canvas, 'eng');
-            let txt = result.data.text.trim().replace(/[^a-zA-Z0-9-\s\/]/g, '');
-
-            if (!txt) {
-                ocrStatus.innerText = "Текст не найден. Попробуйте еще раз.";
-                snapBtn.disabled = false;
-                return;
+                return { list, f, add, del, exportDoc };
             }
-
-            ocrStatus.innerText = "Готово.";
-            snapBtn.disabled = false;
-            videoBox.style.display = 'none';
-            
-            if (currentStep === 1) {
-                editTextSpec.value = txt;
-                questionBox.style.display = 'block';
-            } else if (currentStep === 2) {
-                editTextSpec2.value = txt;
-                step2ConfirmBox.style.display = 'block';
-            }
-
-        } catch (error) {
-            ocrStatus.innerText = "Ошибка модуля распознавания.";
-            snapBtn.disabled = false;
-            console.error(error);
-        }
-    });
-
-    function saveFirstData(type) {
-        const finalTxt = editTextSpec.value.trim();
-        if (type === 'model') { tempModel = finalTxt; } 
-        else { tempSerial = finalTxt; }
-        questionBox.style.display = 'none';
-        goToStep2();
-    }
-
-    function goToStep2() {
-        currentStep = 2;
-        const missingType = !tempModel ? "Модель" : "Серийный номер";
-        stepHeader.innerText = `Шаг 2: Второе фото (Авто-определение: ${missingType})`;
-        videoBox.style.display = 'block';
-        ocrStatus.innerText = `Наведите рамку на: ${missingType}`;
-    }
-
-    confirmStep2Btn.addEventListener('click', () => {
-        const finalTxt2 = editTextSpec2.value.trim();
-        if (!tempModel) { tempModel = finalTxt2; } 
-        else { tempSerial = finalTxt2; }
-        step2ConfirmBox.style.display = 'none';
-        goToStep3();
-    });
-
-    function goToStep3() {
-        currentStep = 3;
-        stepHeader.innerText = "Шаг 3: Укажите производителя";
-        videoBox.style.display = 'none';
-        manufacturerBox.style.display = 'block';
-        vendorInput.focus();
-    }
-
-    saveRowBtn.addEventListener('click', () => {
-        const vendor = vendorInput.value.trim() || "-";
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${rowCounter++}</td><td>${tempModel || "-"}</td><td>${tempSerial || "-"}</td><td>${vendor}</td>`;
-        dataTableBody.appendChild(row);
-        resetWorkflow();
-    });
-
-    function resetWorkflow() {
-        currentStep = 1; tempModel = ""; tempSerial = ""; vendorInput.value = "";
-        editTextSpec.value = ""; editTextSpec2.value = "";
-        stepHeader.innerText = "Шаг 1: Первое фото (Модель или Серия)";
-        manufacturerBox.style.display = 'none';
-        if (stream) { videoBox.style.display = 'block'; ocrStatus.innerText = "Наведите рамку на текст."; } 
-        else { startCamBtn.style.display = 'block'; ocrStatus.innerText = ""; }
-    }
-
-    clearTableBtn.addEventListener('click', () => {
-        if (confirm("Вы уверены, что хотите полностью очистить таблицу?")) {
-            dataTableBody.innerHTML = "";
-            rowCounter = 1;
-            resetWorkflow();
-        }
-    });
-</script>
+        }).mount('#app');
+    </script>
 </body>
 </html>
-
