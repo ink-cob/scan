@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Dark OCR Scanner</title>
-    <!-- Подключение Tesseract.js для распознавания текста без сервера -->
+    <title>Telegram Dark OCR Scanner v3</title>
+    <!-- Подключаем стабильную версию Tesseract.js через CDN -->
     <script src="https://jsdelivr.net"></script>
     <style>
         :root {
@@ -17,14 +17,15 @@
             --danger-color: #e53935;
             --danger-hover: #d32f2f;
             --border-color: #101921;
+            --edit-bg: #243547;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -36,8 +37,8 @@
         }
 
         h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
+            font-size: 22px;
+            margin-bottom: 15px;
             color: #fff;
             text-align: center;
         }
@@ -54,43 +55,29 @@
             font-weight: bold;
             margin-bottom: 15px;
             color: var(--text-color);
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            font-size: 16px;
         }
         .btn {
             background-color: var(--accent-color);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 15px;
             transition: background 0.2s;
+            width: 100%;
         }
 
-        .btn:hover {
-            background-color: var(--accent-hover);
-        }
-
-        .btn-danger {
-            background-color: var(--danger-color);
-        }
-
-        .btn-danger:hover {
-            background-color: var(--danger-hover);
-        }
-
-        .btn:disabled {
-            background-color: var(--text-muted);
-            cursor: not-allowed;
-        }
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: var(--danger-hover); }
+        .btn:disabled { background-color: var(--text-muted); cursor: not-allowed; }
 
         .video-container {
             position: relative;
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
             margin: 15px auto;
             border-radius: 8px;
             overflow: hidden;
@@ -103,15 +90,36 @@
             display: block;
         }
 
-        .choice-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
+        .scanner-laser {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            width: 90%;
+            height: 50px;
+            transform: translateY(-50%);
+            border: 2px solid #2b71b1;
+            box-shadow: 0 0 15px rgba(43, 113, 177, 0.7);
+            border-radius: 4px;
+            pointer-events: none;
+            box-sizing: border-box;
         }
 
+        .scanner-laser::before {
+            content: "ПОМЕСТИТЕ ТЕКСТ СЮДА";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 10px;
+            color: #2b71b1;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .choice-buttons { display: flex; gap: 10px; margin-top: 15px; }
+        
         input[type="text"] {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background: var(--bg-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -120,14 +128,21 @@
             box-sizing: border-box;
         }
 
-        .table-container {
-            overflow-x: auto;
+        /* Поле ввода для оперативной корректировки */
+        .edit-input {
+            background-color: var(--edit-bg) !important;
+            border: 1px solid var(--accent-color) !important;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin: 10px 0;
         }
 
+        .table-container { overflow-x: auto; margin-top: 10px; }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-            background: #ffffff; /* Светлый фон для Word */
+            background: #ffffff;
             color: #000000;
             border: 1px solid #cccccc;
         }
@@ -140,32 +155,16 @@
             font-size: 14px;
         }
 
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-
-        .table-actions {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-        }
-
-        .status {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-top: 5px;
-        }
-
-        canvas {
-            display: none;
-        }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .table-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; gap: 10px; }
+        .status { color: var(--text-muted); font-size: 13px; }
+        canvas { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Telegram Data Scanner</h1>
+    <h1>Telegram Data Scanner v3</h1>
 
     <div class="card" id="workflow-card">
         <div class="step-title" id="step-header">Шаг 1: Первое фото (Модель или Серия)</div>
@@ -175,13 +174,16 @@
             
             <div class="video-container" id="video-box">
                 <video id="webcam" autoplay playsinline></video>
-                <button class="btn" id="snap-btn" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); width:80%;">Сделать снимок</button>
+                <div class="scanner-laser"></div>
+                <button class="btn" id="snap-btn" style="position:absolute; bottom:10px; left:5%; width:90%;">Сделать снимок полоски</button>
             </div>
 
-            <div id="ocr-status" class="status"></div>
+            <div id="ocr-status" class="status" style="margin-top:10px; text-align:center;"></div>
 
+            <!-- Интерактивная зона Шага 1 с полем редактирования -->
             <div id="question-box" style="display:none; margin-top:15px;">
-                <p>Распознан текст: <strong id="recognized-text" style="color:#fff;"></strong></p>
+                <p>Проверьте и скорректируйте текст, если нужно:</p>
+                <input type="text" id="edit-text-input" class="edit-input" autocomplete="off">
                 <p>Что это за цифры?</p>
                 <div class="choice-buttons">
                     <button class="btn" onclick="saveFirstData('model')">Модель</button>
@@ -189,10 +191,18 @@
                 </div>
             </div>
 
+            <!-- Интерактивная зона Шага 2 с полем редактирования -->
+            <div id="step2-confirm-box" style="display:none; margin-top:15px;">
+                <p>Проверьте и скорректируйте второй текст:</p>
+                <input type="text" id="edit-text-input2" class="edit-input" autocomplete="off">
+                <button class="btn" id="confirm-step2-btn" style="margin-top:10px;">Подтвердить и перейти к производителю</button>
+            </div>
+
+            <!-- Ввод производителя -->
             <div id="manufacturer-box" style="display:none; margin-top:15px;">
-                <p>Данные распознаны! Введите производителя:</p>
+                <p>Данные готовы! Укажите производителя:</p>
                 <input type="text" id="vendor-input" placeholder="Например: Samsung, ASUS..." autocomplete="off">
-                <button class="btn" id="save-row-btn" style="margin-top:12px; width:100%;">Добавить в таблицу</button>
+                <button class="btn" id="save-row-btn" style="margin-top:12px;">Добавить в таблицу</button>
             </div>
         </div>
     </div>
@@ -213,8 +223,8 @@
             </table>
         </div>
         <div class="table-actions">
-            <div class="status">Выделите таблицу мышкой, нажмите Ctrl+C и вставьте в Word.</div>
-            <button class="btn btn-danger" id="clear-table-btn">Удалить таблицу</button>
+            <div class="status">Ctrl+C для копирования в Word.</div>
+            <button class="btn btn-danger" id="clear-table-btn" style="width:auto;">Удалить таблицу</button>
         </div>
     </div>
 </div>
@@ -225,7 +235,6 @@
     let currentStep = 1;
     let tempModel = "";
     let tempSerial = "";
-    let lastRecognizedText = "";
     let rowCounter = 1;
 
     const video = document.getElementById('webcam');
@@ -235,7 +244,11 @@
     const snapBtn = document.getElementById('snap-btn');
     const ocrStatus = document.getElementById('ocr-status');
     const questionBox = document.getElementById('question-box');
-    const recognizedTextEl = document.getElementById('recognized-text');
+    const editText // разрыв для разделения
+    const editTextSpec = document.getElementById('edit-text-input');
+    const step2ConfirmBox = document.getElementById('step2-confirm-box');
+    const editTextSpec2 = document.getElementById('edit-text-input2');
+    const confirmStep2Btn = document.getElementById('confirm-step2-btn');
     const stepHeader = document.getElementById('step-header');
     const manufacturerBox = document.getElementById('manufacturer-box');
     const vendorInput = document.getElementById('vendor-input');
@@ -248,37 +261,55 @@
     startCamBtn.addEventListener('click', async () => {
         try {
             stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' }, 
+                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, 
                 audio: false 
             });
             video.srcObject = stream;
             videoBox.style.display = 'block';
             startCamBtn.style.display = 'none';
-            ocrStatus.innerText = "Камера готова.";
+            ocrStatus.innerText = "Наведите рамку строго на нужную строчку.";
         } catch (err) {
-            alert("Не удалось получить доступ к камере.");
-            console.error(err);
+            alert("Ошибка доступа к камере.");
         }
     });
+
     snapBtn.addEventListener('click', async () => {
         if (!stream) return;
         
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        ocrStatus.innerText = "Распознавание текста (OCR)...";
+        ocrStatus.innerText = "Вырезание фрагмента и обработка...";
         snapBtn.disabled = true;
 
-        try {
-            const result = await Tesseract.recognize(canvas, 'eng', {
-                logger: m => console.log(m)
-            });
-            
-            lastRecognizedText = result.data.text.trim().replace(/[^a-zA-Z0-9-\s]/g, '');
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+        
+        const cropHeight = Math.floor(videoHeight * 0.12); 
+        const cropWidth = Math.floor(videoWidth * 0.90);
+        const cropX = Math.floor((videoWidth - cropWidth) / 2);
+        const cropY = Math.floor((videoHeight - cropHeight) / 2);
 
-            if (!lastRecognizedText) {
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+        
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
+            let threshold = 120; 
+            let color = brightness > threshold ? 255 : 0;
+            data[i] = data[i+1] = data[i+2] = color;
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        ocrStatus.innerText = "Распознавание текста (OCR)...";
+
+        try {
+            const result = await Tesseract.recognize(canvas, 'eng');
+            let txt = result.data.text.trim().replace(/[^a-zA-Z0-9-\s\/]/g, '');
+
+            if (!txt) {
                 ocrStatus.innerText = "Текст не найден. Попробуйте еще раз.";
                 snapBtn.disabled = false;
                 return;
@@ -286,34 +317,27 @@
 
             ocrStatus.innerText = "Готово.";
             snapBtn.disabled = false;
+            videoBox.style.display = 'none';
             
             if (currentStep === 1) {
-                videoBox.style.display = 'none';
-                recognizedTextEl.innerText = lastRecognizedText;
+                editTextSpec.value = txt;
                 questionBox.style.display = 'block';
             } else if (currentStep === 2) {
-                videoBox.style.display = 'none';
-                if (!tempModel) {
-                    tempModel = lastRecognizedText;
-                } else {
-                    tempSerial = lastRecognizedText;
-                }
-                goToStep3();
+                editTextSpec2.value = txt;
+                step2ConfirmBox.style.display = 'block';
             }
 
         } catch (error) {
-            ocrStatus.innerText = "Ошибка распознавания.";
+            ocrStatus.innerText = "Ошибка модуля распознавания.";
             snapBtn.disabled = false;
             console.error(error);
         }
     });
 
     function saveFirstData(type) {
-        if (type === 'model') {
-            tempModel = lastRecognizedText;
-        } else {
-            tempSerial = lastRecognizedText;
-        }
+        const finalTxt = editTextSpec.value.trim();
+        if (type === 'model') { tempModel = finalTxt; } 
+        else { tempSerial = finalTxt; }
         questionBox.style.display = 'none';
         goToStep2();
     }
@@ -323,13 +347,20 @@
         const missingType = !tempModel ? "Модель" : "Серийный номер";
         stepHeader.innerText = `Шаг 2: Второе фото (Авто-определение: ${missingType})`;
         videoBox.style.display = 'block';
-        ocrStatus.innerText = `Сделайте снимок для категории: ${missingType}`;
+        ocrStatus.innerText = `Наведите рамку на: ${missingType}`;
     }
+
+    confirmStep2Btn.addEventListener('click', () => {
+        const finalTxt2 = editTextSpec2.value.trim();
+        if (!tempModel) { tempModel = finalTxt2; } 
+        else { tempSerial = finalTxt2; }
+        step2ConfirmBox.style.display = 'none';
+        goToStep3();
+    });
 
     function goToStep3() {
         currentStep = 3;
         stepHeader.innerText = "Шаг 3: Укажите производителя";
-        questionBox.style.display = 'none';
         videoBox.style.display = 'none';
         manufacturerBox.style.display = 'block';
         vendorInput.focus();
@@ -338,31 +369,18 @@
     saveRowBtn.addEventListener('click', () => {
         const vendor = vendorInput.value.trim() || "-";
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${rowCounter++}</td>
-            <td>${tempModel || "-"}</td>
-            <td>${tempSerial || "-"}</td>
-            <td>${vendor}</td>
-        `;
+        row.innerHTML = `<td>${rowCounter++}</td><td>${tempModel || "-"}</td><td>${tempSerial || "-"}</td><td>${vendor}</td>`;
         dataTableBody.appendChild(row);
         resetWorkflow();
     });
 
     function resetWorkflow() {
-        currentStep = 1;
-        tempModel = "";
-        tempSerial = "";
-        lastRecognizedText = "";
-        vendorInput.value = "";
+        currentStep = 1; tempModel = ""; tempSerial = ""; vendorInput.value = "";
+        editTextSpec.value = ""; editTextSpec2.value = "";
         stepHeader.innerText = "Шаг 1: Первое фото (Модель или Серия)";
         manufacturerBox.style.display = 'none';
-        if (stream) {
-            videoBox.style.display = 'block';
-            ocrStatus.innerText = "Камера готова для новой записи.";
-        } else {
-            startCamBtn.style.display = 'block';
-            ocrStatus.innerText = "";
-        }
+        if (stream) { videoBox.style.display = 'block'; ocrStatus.innerText = "Наведите рамку на текст."; } 
+        else { startCamBtn.style.display = 'block'; ocrStatus.innerText = ""; }
     }
 
     clearTableBtn.addEventListener('click', () => {
@@ -375,3 +393,4 @@
 </script>
 </body>
 </html>
+
