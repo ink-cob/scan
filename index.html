@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Dark OCR Scanner</title>
+    <!-- Подключение Tesseract.js для распознавания текста без сервера -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        :root {
+            --bg-color: #182533;
+            --panel-bg: #202b36;
+            --text-color: #f5f5f5;
+            --text-muted: #7e8b99;
+            --accent-color: #2b71b1;
+            --accent-hover: #3a82c4;
+            --danger-color: #e53935;
+            --danger-hover: #d32f2f;
+            --border-color: #101921;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        .step-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--text-color);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--danger-hover);
+        }
+
+        .btn:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 15px auto;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+            background: #000;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        .choice-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff; /* Светлый фон для Word */
+            color: #000000;
+            border: 1px solid #cccccc;
+        }
+
+        th, td {
+            border: 1px solid #cccccc;
+            padding: 10px;
+            text-align: left;
+            font-family: "Arial", sans-serif;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        .table-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .status {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Telegram Data Scanner</h1>
+
+    <div class="card" id="workflow-card">
+        <div class="step-title" id="step-header">Шаг 1: Первое фото (Модель или Серия)</div>
+        
+        <div id="action-area">
+            <button class="btn" id="start-camera-btn">Включить камеру</button>
+            
+            <div class="video-container" id="video-box">
+                <video id="webcam" autoplay playsinline></video>
+                <button class="btn" id="snap-btn" style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); width:80%;">Сделать снимок</button>
+            </div>
+
+            <div id="ocr-status" class="status"></div>
+
+            <div id="question-box" style="display:none; margin-top:15px;">
+                <p>Распознан текст: <strong id="recognized-text" style="color:#fff;"></strong></p>
+                <p>Что это за цифры?</p>
+                <div class="choice-buttons">
+                    <button class="btn" onclick="saveFirstData('model')">Модель</button>
+                    <button class="btn" onclick="saveFirstData('serial')">Серийный номер</button>
+                </div>
+            </div>
+
+            <div id="manufacturer-box" style="display:none; margin-top:15px;">
+                <p>Данные распознаны! Введите производителя:</p>
+                <input type="text" id="vendor-input" placeholder="Например: Samsung, ASUS..." autocomplete="off">
+                <button class="btn" id="save-row-btn" style="margin-top:12px; width:100%;">Добавить в таблицу</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="step-title">Полученные данные</div>
+        <div class="table-container">
+            <table id="data-table">
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Модель</th>
+                        <th>Серия</th>
+                        <th>Производитель</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="table-actions">
+            <div class="status">Выделите таблицу мышкой, нажмите Ctrl+C и вставьте в Word.</div>
+            <button class="btn btn-danger" id="clear-table-btn">Удалить таблицу</button>
+        </div>
+    </div>
+</div>
+
+<canvas id="capture-canvas"></canvas>
+
+<script>
+    let currentStep = 1;
+    let tempModel = "";
+    let tempSerial = "";
+    let lastRecognizedText = "";
+    let rowCounter = 1;
+
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('capture-canvas');
+    const startCamBtn = document.getElementById('start-camera-btn');
+    const videoBox = document.getElementById('video-box');
+    const snapBtn = document.getElementById('snap-btn');
+    const ocrStatus = document.getElementById('ocr-status');
+    const questionBox = document.getElementById('question-box');
+    const recognizedTextEl = document.getElementById('recognized-text');
+    const stepHeader = document.getElementById('step-header');
+    const manufacturerBox = document.getElementById('manufacturer-box');
+    const vendorInput = document.getElementById('vendor-input');
+    const saveRowBtn = document.getElementById('save-row-btn');
+    const dataTableBody = document.querySelector('#data-table tbody');
+    const clearTableBtn = document.getElementById('clear-table-btn');
+
+    let stream = null;
+
+    startCamBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' }, 
+                audio: false 
+            });
+            video.srcObject = stream;
+            videoBox.style.display = 'block';
+            startCamBtn.style.display = 'none';
+            ocrStatus.innerText = "Камера готова.";
+        } catch (err) {
+            alert("Не удалось получить доступ к камере.");
+            console.error(err);
+        }
+    });
+    snapBtn.addEventListener('click', async () => {
+        if (!stream) return;
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        ocrStatus.innerText = "Распознавание текста (OCR)...";
+        snapBtn.disabled = true;
+
+        try {
+            const result = await Tesseract.recognize(canvas, 'eng', {
+                logger: m => console.log(m)
+            });
+            
+            lastRecognizedText = result.data.text.trim().replace(/[^a-zA-Z0-9-\s]/g, '');
+
+            if (!lastRecognizedText) {
+                ocrStatus.innerText = "Текст не найден. Попробуйте еще раз.";
+                snapBtn.disabled = false;
+                return;
+            }
+
+            ocrStatus.innerText = "Готово.";
+            snapBtn.disabled = false;
+            
+            if (currentStep === 1) {
+                videoBox.style.display = 'none';
+                recognizedTextEl.innerText = lastRecognizedText;
+                questionBox.style.display = 'block';
+            } else if (currentStep === 2) {
+                videoBox.style.display = 'none';
+                if (!tempModel) {
+                    tempModel = lastRecognizedText;
+                } else {
+                    tempSerial = lastRecognizedText;
+                }
+                goToStep3();
+            }
+
+        } catch (error) {
+            ocrStatus.innerText = "Ошибка распознавания.";
+            snapBtn.disabled = false;
+            console.error(error);
+        }
+    });
+
+    function saveFirstData(type) {
+        if (type === 'model') {
+            tempModel = lastRecognizedText;
+        } else {
+            tempSerial = lastRecognizedText;
+        }
+        questionBox.style.display = 'none';
+        goToStep2();
+    }
+
+    function goToStep2() {
+        currentStep = 2;
+        const missingType = !tempModel ? "Модель" : "Серийный номер";
+        stepHeader.innerText = `Шаг 2: Второе фото (Авто-определение: ${missingType})`;
+        videoBox.style.display = 'block';
+        ocrStatus.innerText = `Сделайте снимок для категории: ${missingType}`;
+    }
+
+    function goToStep3() {
+        currentStep = 3;
+        stepHeader.innerText = "Шаг 3: Укажите производителя";
+        questionBox.style.display = 'none';
+        videoBox.style.display = 'none';
+        manufacturerBox.style.display = 'block';
+        vendorInput.focus();
+    }
+
+    saveRowBtn.addEventListener('click', () => {
+        const vendor = vendorInput.value.trim() || "-";
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${rowCounter++}</td>
+            <td>${tempModel || "-"}</td>
+            <td>${tempSerial || "-"}</td>
+            <td>${vendor}</td>
+        `;
+        dataTableBody.appendChild(row);
+        resetWorkflow();
+    });
+
+    function resetWorkflow() {
+        currentStep = 1;
+        tempModel = "";
+        tempSerial = "";
+        lastRecognizedText = "";
+        vendorInput.value = "";
+        stepHeader.innerText = "Шаг 1: Первое фото (Модель или Серия)";
+        manufacturerBox.style.display = 'none';
+        if (stream) {
+            videoBox.style.display = 'block';
+            ocrStatus.innerText = "Камера готова для новой записи.";
+        } else {
+            startCamBtn.style.display = 'block';
+            ocrStatus.innerText = "";
+        }
+    }
+
+    clearTableBtn.addEventListener('click', () => {
+        if (confirm("Вы уверены, что хотите полностью очистить таблицу?")) {
+            dataTableBody.innerHTML = "";
+            rowCounter = 1;
+            resetWorkflow();
+        }
+    });
+</script>
+</body>
+</html>
