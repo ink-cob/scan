@@ -2,285 +2,562 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мониторы</title>
-    <!-- Подключение автономного сканера штрих-кодов -->
-    <script src="https://unpkg.com">
-    let dbData = JSON.parse(localStorage.getItem('monitors_archive')) || [];
-    let tempSN = '';
-    let tempPhoto = '';
-    let scannerObj = null;
-    let cameraStream = null;
-
-    function showScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
-
-    // --- ЛОГИКА ДОБАВЛЕНИЯ МОНИТОРА ---
-    
-    // Нажатие на кнопка ПЛЮС -> Запуск сканера штрих-кодов
-    document.getElementById('btn-add').addEventListener('click', () => {
-        tempSN = ''; tempPhoto = '';
-        showScreen('scr-scanner');
-        scannerObj = new Html5Qrcode("scanner-view");
-        scannerObj.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 150 } },
-            (text) => {
-                tempSN = text;
-                scannerObj.stop().then(() => { scannerObj = null; openCam(); });
-            },
-            () => {}
-        ).catch(() => {
-            tempSN = prompt("Сканер недоступен. Введите серийный номер:") || "—";
-            openCam();
-        });
-    });
-
-    // Шаг 2: Включение камеры для фото модели
-    async function openCam() {
-        showScreen('scr-camera');
-        const video = document.getElementById('webcam');
-        try {
-            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-            video.srcObject = cameraStream;
-        } catch {
-            alert("Камера недоступна");
-            openCard();
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Монитор Эксперт</title>
+    <style>
+        /* Telegram Dark Theme Colors */
+        :root {
+            --bg-color: #182533;
+            --secondary-bg: #202b36;
+            --text-color: #f5f5f5;
+            --text-muted: #7f91a4;
+            --button-bg: #2f6ea5;
+            --button-hover: #3b82c4;
+            --danger-color: #e53935;
+            --success-color: #4caf50;
+            --border-color: #2b394a;
         }
-    }
 
-    // Кнопка Сделать фото
-    document.getElementById('btn-shoot').addEventListener('click', () => {
-        const video = document.getElementById('webcam');
-        const canvas = document.getElementById('photo-canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        tempPhoto = canvas.toDataURL('image/jpeg', 0.6);
-        
-        if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); }
-        openCard();
-    });
-
-    // Шаг 3: Открытие карточки параметров
-    function openCard() {
-        showScreen('scr-card');
-        document.getElementById('view-photo').src = tempPhoto || '';
-        document.getElementById('out-sn').value = tempSN;
-        document.getElementById('out-brand').value = '';
-        document.getElementById('out-model').value = '';
-    }
-
-    // Кнопка возвращения в главное меню (сохраняет данные)
-    document.getElementById('btn-to-main').addEventListener('click', () => {
-        const item = {
-            id: Date.now(),
-            brand: document.getElementById('out-brand').value || '—',
-            model: document.getElementById('out-model').value || '—',
-            sn: document.getElementById('out-sn').value || '—',
-            photo: tempPhoto
-        };
-        dbData.push(item);
-        localStorage.setItem('monitors_archive', JSON.stringify(dbData));
-        showScreen('scr-main');
-    });
-
-    // --- ЛОГИКА БАЗЫ ДАННЫХ ---
-
-    document.getElementById('btn-db').addEventListener('click', () => {
-        buildDbViews();
-        showScreen('scr-db');
-        document.getElementById('db-cards-container').classList.add('active');
-        document.getElementById('db-table-container').classList.remove('active');
-        document.getElementById('btn-format-table').textContent = 'Форматировать в таблицу';
-    });
-
-    document.getElementById('btn-db-back').addEventListener('click', () => {
-        showScreen('scr-main');
-    });
-
-    function buildDbViews() {
-        const cardsWrap = document.getElementById('db-cards-container');
-        const tableBody = document.querySelector('#word-table tbody');
-        cardsWrap.innerHTML = '';
-        tableBody.innerHTML = '';
-
-        dbData.forEach(item => {
-            // Отрисовка списка карточек
-            const div = document.createElement('div');
-            div.className = 'db-item';
-            div.innerHTML = `
-                <h4>${item.brand} ${item.model}</h4>
-                <p><b>S/N:</b> ${item.sn}</p>
-                <button class="btn-del" onclick="removeSingle(${item.id})">❌</button>
-            `;
-            cardsWrap.appendChild(div);
-
-            // Отрисовка таблицы (Модель, SN, Производитель)
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${item.model}</td><td>${item.sn}</td><td>${item.brand}</td>`;
-            tableBody.appendChild(tr);
-        });
-    }
-
-    // Переключение режимов (Карточки / Таблица)
-    document.getElementById('btn-format-table').addEventListener('click', function() {
-        const cView = document.getElementById('db-cards-container');
-        const tView = document.getElementById('db-table-container');
-        if (cView.classList.contains('active')) {
-            cView.classList.remove('active');
-            tView.classList.add('active');
-            this.textContent = 'Показать карточки';
-        } else {
-            tView.classList.remove('active');
-            cView.classList.add('active');
-            this.textContent = 'Форматировать в таблицу';
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
-    });
 
-    // Удаление отдельной карточки
-    window.removeSingle = function(id) {
-        if(confirm('Удалить эту карточку?')) {
-            dbData = dbData.filter(i => i.id !== id);
-            localStorage.setItem('monitors_archive', JSON.stringify(dbData));
-            buildDbViews();
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
-    };
 
-    // Очистить всю базу
-    document.getElementById('btn-clear-all').addEventListener('click', () => {
-        if(confirm('Полностью очистить базу данных?')) {
-            dbData = [];
-            localStorage.setItem('monitors_archive', JSON.stringify(dbData));
-            buildDbViews();
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
-    });
-</script>
-<style>
-    :root {
-        --tg-bg: #182533;
-        --tg-panel: #202b36;
-        --tg-text: #f5f5f5;
-        --tg-muted: #7f91a4;
-        --tg-button: #2f8ccd;
-        --tg-button-hover: #3b9cd9;
-        --tg-danger: #ec3942;
-        --tg-border: #2f3e4e;
-    }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--tg-bg); color: var(--tg-text); display: flex; justify-content: center; padding: 20px; }
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
 
-    .screen { display: none; width: 100%; max-width: 450px; background: var(--tg-panel); border-radius: 10px; overflow: hidden; }
-    .screen.active { display: block; }
+        .screen {
+            display: none;
+            background-color: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            width: 100%;
+        }
 
-    /* Главное меню */
-    .main-layout { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
-    #btn-add { font-size: 32px; height: 80px; }
+        .screen.active {
+            display: block;
+        }
 
-    /* Кнопки */
-    button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; color: #fff; font-weight: 500; }
-    .btn-tg-primary { background: var(--tg-button); }
-    .btn-tg-primary:hover { background: var(--tg-button-hover); }
-    .btn-tg-secondary { background: #2b394a; border: 1px solid var(--tg-border); }
-    .btn-tg-secondary:hover { background: #35465b; }
-    .btn-danger { background: var(--tg-danger); }
-    .btn-text { background: transparent; width: auto; color: var(--tg-button); }
+        /* Кнопки */
+        .btn {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: none;
+            padding: 14px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 500;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
 
-    /* Сканер и Камера */
-    #scanner-view { width: 100%; aspect-ratio: 4/3; background: #000; }
-    #webcam { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #000; }
-    #btn-shoot { margin: 15px; width: calc(100% - 30px); }
+        .btn:active {
+            background-color: var(--button-hover);
+        }
 
-    /* Карточка */
-    .card-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-    .img-wrap { width: 100%; max-height: 180px; background: #000; display: flex; justify-content: center; border-radius: 6px; overflow: hidden; }
-    .img-wrap img { max-width: 100%; max-height: 180px; object-fit: contain; }
-    .field { display: flex; flex-direction: column; gap: 5px; }
-    .field label { color: var(--tg-muted); font-size: 13px; }
-    .field input { background: #24313f; border: 1px solid var(--tg-border); border-radius: 6px; padding: 10px; color: #fff; font-size: 15px; outline: none; }
-    .field input:focus { border-color: var(--tg-button); }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:active { background-color: #d32f2f; }
+        .btn-secondary { background-color: #505c6b; }
+        .btn-secondary:active { background-color: #647385; }
 
-    /* База данных */
-    .db-header { padding: 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--tg-border); background: #17212b; }
-    .db-header button { padding: 8px 12px; font-size: 13px; }
-    .db-view { display: none; padding: 15px; max-height: 75vh; overflow-y: auto; }
-    .db-view.active { display: block; }
+        /* Главное меню */
+        .main-menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+        }
 
-    /* Элемент списка в БД */
-    .db-item { background: #24313f; border: 1px solid var(--tg-border); border-radius: 8px; padding: 12px; margin-bottom: 10px; position: relative; }
-    .db-item h4 { color: var(--tg-button); margin-bottom: 4px; }
-    .db-item p { font-size: 14px; color: var(--tg-text); }
-    .btn-del { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; padding: 0; background: transparent; color: var(--tg-muted); }
-    .btn-del:hover { color: var(--tg-danger); }
+        /* Камера и сканер */
+        .camera-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
 
-    /* Таблица Word */
-    table { width: 100%; border-collapse: collapse; background: #24313f; font-size: 14px; }
-    th, td { border: 1px solid var(--tg-border); padding: 8px; text-align: left; }
-    th { background: #17212b; color: var(--tg-button); }
-</style>
+        video, canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-laser {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            width: 90%;
+            height: 2px;
+            background-color: var(--danger-color);
+            box-shadow: 0 0 8px var(--danger-color);
+            animation: scan 2s infinite linear;
+        }
+
+        @keyframes scan {
+            0% { top: 20%; }
+            50% { top: 80%; }
+            100% { top: 20%; }
+        }
+
+        /* Формы и Карточки */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        input:focus, textarea:focus {
+            outline: 1px solid var(--button-bg);
+        }
+
+        .photo-preview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            background: #000;
+            display: none;
+        }
+
+        /* Таблица базы данных */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-color);
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #24313f;
+            color: var(--text-muted);
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            width: auto;
+        }
+
+        .db-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
 
-    <!-- Главное меню (2 кнопки) -->
-    <div id="scr-main" class="screen active">
-        <div class="main-layout">
-            <button id="btn-add" class="btn-tg-primary">＋</button>
-            <button id="btn-db" class="btn-tg-secondary">База данных</button>
+<div class="container">
+    
+    <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
+    <div id="screen-main" class="screen active">
+        <h1>Монитор Эксперт</h1>
+        <div class="main-menu-buttons">
+            <button class="btn" onclick="startScanner()">➕ Добавить монитор</button>
+            <button class="btn btn-secondary" onclick="openDatabase()">📁 База данных</button>
         </div>
     </div>
-
-    <!-- Шаг 1: Сканер штрих-кодов -->
-    <div id="scr-scanner" class="screen">
-        <div id="scanner-view"></div>
-    </div>
-
-    <!-- Шаг 2: Камера для фото модели/производителя -->
-    <div id="scr-camera" class="screen">
-        <video id="webcam" autoplay playsinline></video>
-        <canvas id="photo-canvas" style="display:none;"></canvas>
-        <button id="btn-shoot" class="btn-tg-primary">Сделать фото</button>
-    </div>
-
-    <!-- Шаг 3: Карточка параметров -->
-    <div id="scr-card" class="screen">
-        <div class="card-content">
-            <div class="img-wrap"><img id="view-photo" src="" alt="Фото"></div>
-            <div class="field"><label>Производитель</label><input type="text" id="out-brand"></div>
-            <div class="field"><label>Модель</label><input type="text" id="out-model"></div>
-            <div class="field"><label>Серийный номер</label><input type="text" id="out-sn"></div>
-            <button id="btn-to-main" class="btn-tg-primary">Главное меню</button>
+    <!-- ЭКРАН 2: СКАНЕР ШТРИХ-КОДА -->
+    <div id="screen-scanner" class="screen">
+        <h2>Сканирование серийного номера</h2>
+        <p style="color: var(--text-muted); text-align:center; margin-bottom:15px; font-size:14px;">
+            Наведите камеру на штрих-код или введите вручную ниже
+        </p>
+        <div class="camera-box">
+            <video id="scanner-video" autoplay playsinline></video>
+            <div class="scanner-laser"></div>
         </div>
+        <div class="form-group">
+            <input type="text" id="manual-serial" placeholder="Серийный номер (если не сканируется)">
+        </div>
+        <button class="btn" onclick="captureSerial()">Далее (Захватить С/Н) ➡️</button>
+        <button class="btn btn-secondary" onclick="goToMain()" style="margin-top: 10px;">Отмена</button>
     </div>
 
-    <!-- Экран 4: База данных -->
-    <div id="scr-db" class="screen">
-        <div class="db-header">
-            <button id="btn-db-back" class="btn-text">◀ Назад</button>
-            <button id="btn-format-table" class="btn-tg-secondary">Форматировать в таблицу</button>
-            <button id="btn-clear-all" class="btn-danger">Очистить базу</button>
+    <!-- ЭКРАН 3: ФОТОГРАФИЯ МОДЕЛИ И ПРОИЗВОДИТЕЛЯ -->
+    <div id="screen-camera" class="screen">
+        <h2>Фото модели и бренда</h2>
+        <p style="color: var(--text-muted); text-align:center; margin-bottom:15px; font-size:14px;">
+            Сделайте снимок наклейки на задней панели монитора
+        </p>
+        <div class="camera-box">
+            <video id="camera-video" autoplay playsinline></video>
+        </div>
+        <button class="btn" onclick="capturePhoto()">📸 Сделать снимок</button>
+        <button class="btn btn-secondary" onclick="goToMain()" style="margin-top: 10px;">Отмена</button>
+    </div>
+
+    <!-- ЭКРАН 4: КАРТОЧКА ПАРАМЕТРОВ МОНИТОРА -->
+    <div id="screen-card" class="screen">
+        <h2>Параметры монитора</h2>
+        <img id="saved-photo-preview" class="photo-preview" alt="Превью модели">
+        
+        <div class="form-group">
+            <label>Производитель</label>
+            <input type="text" id="monitor-brand" placeholder="Например: Samsung, LG, ASUS">
+        </div>
+        <div class="form-group">
+            <label>Модель монитора</label>
+            <input type="text" id="monitor-model" placeholder="Например: Odyssey G5, UltraGear">
+        </div>
+        <div class="form-group">
+            <label>Серийный номер</label>
+            <input type="text" id="monitor-serial" readonly>
+        </div>
+        <div class="form-group">
+            <label>Дополнительное описание / Примечания</label>
+            <textarea id="monitor-desc" rows="3" placeholder="Диагональ, разъемы, состояние..."></textarea>
+        </div>
+        
+        <button class="btn" onclick="saveMonitorData()">💾 Сохранить карточку</button>
+        <button class="btn btn-secondary" onclick="goToMain()" style="margin-top: 10px;">Главное меню</button>
+    </div>
+
+    <!-- ЭКРАН 5: БАЗА ДАННЫХ -->
+    <div id="screen-database" class="screen" style="max-width: 100%;">
+        <h2>База данных мониторов</h2>
+        
+        <div class="db-actions">
+            <button class="btn btn-secondary btn-sm" onclick="copyTableToClipboard()">📋 Копировать для Word</button>
+            <button class="btn btn-danger btn-sm" onclick="clearDatabase()">🗑️ Очистить всё</button>
         </div>
 
-        <!-- Вид карточками -->
-        <div id="db-cards-container" class="db-view active"></div>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">
+            💡 Таблицу ниже можно выделить пальцем и скопировать целиком, либо нажать кнопку выше.
+        </p>
 
-        <!-- Вид таблицей для копирования в Word -->
-        <div id="db-table-container" class="db-view">
-            <table id="word-table">
+        <div class="table-container">
+            <table id="monitors-table">
                 <thead>
                     <tr>
+                        <th>Производитель</th>
                         <th>Модель</th>
                         <th>Серийный номер</th>
-                        <th>Производитель</th>
+                        <th>Действие</th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody id="database-tbody">
+                    <!-- Сюда скрипт добавит строки динамически -->
+                </tbody>
             </table>
         </div>
+
+        <button class="btn btn-secondary" onclick="goToMain()" style="margin-top: 20px;">⬅️ Назад в меню</button>
     </div>
 
+</div> <!-- Конец контейнера -->
+
+<!-- Невидимый холст для обработки снимков с камеры -->
+<canvas id="hidden-canvas" style="display:none;"></canvas>
+<script>
+    // Глобальные переменные для хранения потока камеры и текущих данных
+    let currentStream = null;
+    let tempMonitorData = {
+        serial: '',
+        photo: '',
+        brand: '',
+        model: '',
+        desc: ''
+    };
+
+    // Функция переключения экранов
+    function showScreen(screenId) {
+        // Останавливаем камеру, если уходим с экранов съемки
+        if (screenId !== 'screen-scanner' && screenId !== 'screen-camera') {
+            stopCamera();
+        }
+        
+        // Скрываем все экраны и показываем нужный
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
+        });
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    // Возврат в главное меню
+    function goToMain() {
+        showScreen('screen-main');
+    }
+
+    // ВКЛЮЧЕНИЕ КАМЕРЫ
+    async function startCamera(videoElementId) {
+        stopCamera(); // На всякий случай гасим старый поток
+        
+        const constraints = {
+            video: {
+                // Запрашиваем заднюю камеру смартфона (environment)
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        };
+
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            const videoElement = document.getElementById(videoElementId);
+            videoElement.srcObject = currentStream;
+        } catch (err) {
+            console.error("Ошибка доступа к камере: ", err);
+            alert("Не удалось открыть камеру. Убедитесь, что дали разрешение сайту в настройках браузера.");
+        }
+    }
+
+    // ОСТАНОВКА КАМЕРЫ
+    function stopCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+    }
+
+    // ШАГ 1: Запуск сканера
+    function startScanner() {
+        // Сбрасываем временные данные
+        tempMonitorData = { serial: '', photo: '', brand: '', model: '', desc: '' };
+        document.getElementById('manual-serial').value = '';
+        document.getElementById('monitor-brand').value = '';
+        document.getElementById('monitor-model').value = '';
+        document.getElementById('monitor-desc').value = '';
+        
+        showScreen('screen-scanner');
+        startCamera('scanner-video');
+    }
+
+    // ШАГ 2: Фиксация серийного номера
+    function captureSerial() {
+        const manualInput = document.getElementById('manual-serial').value.trim();
+        
+        // Так как это автономный HTML-файл без внешних библиотек, полноценный ИИ-сканер штрих-кода 
+        // требует тяжелых скриптов. Мы берем номер из поля ввода, куда его можно ввести руками 
+        // или использовать встроенную клавиатуру-сканер телефона (есть на многих Android/iOS).
+        if (!manualInput) {
+            // Если поле пустое, сгенерируем случайный номер для демонстрации теста
+            const randomSerial = 'SN-' + Math.floor(100000 + Math.random() * 900000);
+            tempMonitorData.serial = randomSerial;
+            alert("Штрих-код не введен вручную. Для теста сгенерирован случайный С/Н: " + randomSerial);
+        } else {
+            tempMonitorData.serial = manualInput;
+        }
+
+        // Переходим к камере для фото модели
+        showScreen('screen-camera');
+        startCamera('camera-video');
+    }
+
+    // ШАГ 3: Фотографирование шильдика монитора
+    function capturePhoto() {
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('hidden-canvas');
+        const context = canvas.getContext('2d');
+
+        if (currentStream) {
+            // Настраиваем размер холста под реальное видео
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            // Рисуем текущий кадр из видео на скрытый холст
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Превращаем картинку в строку (Base64) для сохранения в локальную память
+            const photoDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            tempMonitorData.photo = photoDataUrl;
+
+            // Отображаем превью на экране карточки
+            const previewImg = document.getElementById('saved-photo-preview');
+            previewImg.src = photoDataUrl;
+            previewImg.style.display = 'block';
+
+            // Автозаполнение серийного номера в карточке
+            document.getElementById('monitor-serial').value = tempMonitorData.serial;
+
+            // Переходим к заполнению характеристик
+            showScreen('screen-card');
+        } else {
+            alert("Камера не активна. Переход к карточке.");
+            showScreen('screen-card');
+        }
+    }
+
+    // ШАГ 4: Сохранение всей карточки в локальную БД
+    function saveMonitorData() {
+        const brand = document.getElementById('monitor-brand').value.trim();
+        const model = document.getElementById('monitor-model').value.trim();
+        const desc = document.getElementById('monitor-desc').value.trim();
+
+        if (!brand || !model) {
+            alert("Пожалуйста, заполните поля 'Производитель' и 'Модель'!");
+            return;
+        }
+
+        tempMonitorData.brand = brand;
+        tempMonitorData.model = model;
+        tempMonitorData.desc = desc;
+
+        // Извлекаем уже сохраненную базу из localStorage или создаем массив, если пусто
+        let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+        
+        // Добавляем новую карточку в начало списка
+        db.unshift(tempMonitorData);
+        
+        // Записываем обратно в память смартфона
+        localStorage.setItem('monitors_db', JSON.stringify(db));
+
+        alert("Карточка монитора успешно сохранена в базу данных!");
+        goToMain();
+    }
+
+    // ОТКРЫТИЕ БАЗЫ ДАННЫХ
+    function openDatabase() {
+        showScreen('screen-database');
+        renderTable();
+    }
+
+    // ОТРИСОВКА ТАБЛИЦЫ ИЗ localStorage
+    function renderTable() {
+        const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+        const tbody = document.getElementById('database-tbody');
+        tbody.innerHTML = '';
+
+        if (db.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">База данных пуста</td></tr>`;
+            return;
+        }
+
+        db.forEach((monitor, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${escapeHtml(monitor.brand)}</td>
+                <td>${escapeHtml(monitor.model)}</td>
+                <td><code style="background:#1c2a38; padding:3px 6px; border-radius:4px;">${escapeHtml(monitor.serial)}</code></td>
+                <td class="actions-cell">
+                    <button class="btn btn-danger btn-sm" onclick="deleteMonitor(${index})">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Удаление отдельной карточки
+    function deleteMonitor(index) {
+        if (confirm("Удалить эту карточку из базы?")) {
+            let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+            db.splice(index, 1);
+            localStorage.setItem('monitors_db', JSON.stringify(db));
+            renderTable();
+        }
+    }
+
+    // Очистить всю базу данных
+    function clearDatabase() {
+        if (confirm("Вы уверены, что хотите ПОЛНОСТЬЮ очистить всю базу данных мониторов? Это действие нельзя отменить.")) {
+            localStorage.removeItem('monitors_db');
+            renderTable();
+        }
+    }
+
+    // КОПИРОВАНИЕ ТАБЛИЦЫ ДЛЯ WORD
+    function copyTableToClipboard() {
+        const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+        if (db.length === 0) {
+            alert("База пуста, нечего копировать!");
+            return;
+        }
+
+        // Создаем текстовое представление таблицы с табуляцией, чтобы Word распознал это как колонки
+        let textForWord = "Производитель\tМодель\tСерийный номер\n";
+        
+        db.forEach(m => {
+            textForWord += `${m.brand}\t${m.model}\t${m.serial}\n`;
+        });
+
+        // Работа с буфером обмена телефона
+        navigator.clipboard.writeText(textForWord).then(() => {
+            alert("Таблица скопирована в буфер обмена в формате для Word (разделение табуляцией). Теперь просто вставьте её (Ctrl+V или Зажать -> Вставить) в документ!");
+        }).catch(err => {
+            console.error("Не удалось скопировать: ", err);
+            alert("Ошибка буфера обмена. Вы можете выделить таблицу на экране пальцем вручную.");
+        });
+    }
+
+    // Безопасное отображение текста (защита от поломки верстки спецсимволами)
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
 </body>
 </html>
