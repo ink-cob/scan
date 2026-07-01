@@ -271,15 +271,19 @@
 <canvas id="hidden-canvas" style="display:none;"></canvas>
 
 <script>
-    const codeReader = new ZXing.BrowserMultiFormatReader();
+    // Проверяем, поддерживает ли телефон встроенный сканер кодов на уровне системы
+    const hasBuiltInScanner = ('BarcodeDetector' in window);
+    
     let currentStream = null;
-    let codeReaderControls = null;
+    let scanInterval = null;
 
+    // Объявляем переменную в самом верху, чтобы к ней всегда был доступ
     let tempMonitorData = {
         serial: '',
         brand: '',
         model: ''
     };
+
     // Функция переключения экранов
     function showScreen(screenId) {
         stopAllCameras();
@@ -293,7 +297,6 @@
         showScreen('screen-main');
     }
 
-    // Принудительный перезапуск действия при ошибке
     function restartStep(step) {
         if (step === 'barcode') {
             startBarcodeScan();
@@ -302,11 +305,11 @@
         }
     }
 
-    // Полная остановка всех камер
+    // Полная остановка всех процессов и камер
     function stopAllCameras() {
-        if (codeReaderControls) {
-            codeReaderControls.stop();
-            codeReaderControls = null;
+        if (scanInterval) {
+            clearInterval(scanInterval);
+            scanInterval = null;
         }
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
@@ -314,66 +317,79 @@
         }
     }
 
-    // Запуск автоматического сканирования штрихкода
+    // --- ШАГ 1: СКАНЕР ШТРИХКОДА (Встроенный или ручной) ---
     async function startBarcodeScan() {
+        // Гарантированно инициализируем объект данных
         tempMonitorData = { serial: '', brand: '', model: '' };
         document.getElementById('manual-serial').value = '';
         
         showScreen('screen-barcode');
 
         try {
-            codeReaderControls = await codeReader.decodeFromVideoDevice(
-                undefined, 
-                'barcode-video', 
-                (result, err) => {
-                    if (result) {
-                        tempMonitorData.serial = result.text;
-                        stopAllCameras();
-                        if (navigator.vibrate) navigator.vibrate(100);
-                        startModelCamera();
-                    }
-                }
-            );
-        } catch (err) {
-            console.error("Ошибка сканера штрихкодов: ", err);
-            startFallbackCamera('barcode-video');
-        }
-    }
-
-    // Резервный запуск камеры, если ИИ-библиотека штрихкода дала сбой
-    async function startFallbackCamera(videoId) {
-        try {
+            // Запускаем поток камеры смартфона
             currentStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: "environment" } },
+                video: { facingMode: { ideal: "environment" }, width: 1280, height: 720 },
                 audio: false
             });
-            document.getElementById(videoId).srcObject = currentStream;
-        } catch (e) {
-            alert("Не удалось получить доступ к камере телефона.");
+            
+            const videoElement = document.getElementById('barcode-video');
+            videoElement.srcObject = currentStream;
+
+            // Если браузер поддерживает встроенный ИИ-сканер кодов
+            if (hasBuiltInScanner) {
+                const barcodeDetector = new BarcodeDetector({ formats: ['code_128', 'ean_13', 'code_39'] });
+                
+                // Проверяем кадры каждые 300 миллисекунд
+                scanInterval = setInterval(async () => {
+                    if (videoElement.readyState === videoElement.HAVE_CURRENT_DATA) {
+                        try {
+                            const barcodes = await barcodeDetector.detect(videoElement);
+                            if (barcodes.length > 0) {
+                                tempMonitorData.serial = barcodes.rawValue;
+                                stopAllCameras();
+                                if (navigator.vibrate) navigator.vibrate(100);
+                                startModelCamera();
+                            }
+                        } catch (e) {
+                            console.log("Поиск кода в кадре...");
+                        }
+                    }
+                }, 300);
+            }
+        } catch (err) {
+            console.error("Ошибка запуска камеры: ", err);
+            alert("Не удалось активировать камеру. Введите серийный номер вручную.");
         }
     }
 
-    // Ручной ввод серийного номера, если штрихкод сильно поврежден
     function acceptBarcodeManually() {
         const val = document.getElementById('manual-serial').value.trim();
         if (!val) {
-            alert("Пожалуйста, дождитесь считывания штрихкода или введите его вручную.");
+            alert("Пожалуйста, дождитесь автосканирования штрихкода или введите его вручную.");
             return;
         }
         tempMonitorData.serial = val;
         startModelCamera();
     }
 
-    // Камера для фото и распознавания текста (OCR)
-    function startModelCamera() {
+    // --- ШАГ 2: СЪЕМКА НАКЛЕЙКИ МОДЕЛИ ---
+    async function startModelCamera() {
         showScreen('screen-camera');
         document.getElementById('ocr-loader').style.display = 'none';
         document.getElementById('camera-wrapper').style.display = 'block';
         document.getElementById('capture-ocr-btn').style.display = 'flex';
         
-        startFallbackCamera('camera-video');
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" } },
+                audio: false
+            });
+            document.getElementById('camera-video').srcObject = currentStream;
+        } catch (e) {
+            alert("Не удалось запустить камеру для фото.");
+        }
     }
-    // Захват кадра и запуск анализа нейросетью Tesseract.js
+    // Захват кадра и отправка в Tesseract
     async function captureAndRecognizeText() {
         const video = document.getElementById('camera-video');
         const canvas = document.getElementById('hidden-canvas');
@@ -382,26 +398,31 @@
         const loaderText = document.getElementById('loader-text');
 
         if (!video.srcObject) {
-            alert("Камера не готова. Перезапустите действие.");
+            alert("Камера не готова.");
             return;
         }
 
-        // Делаем моментальный снимок на скрытый холст
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
         const imageBlob = canvas.toDataURL('image/jpeg', 0.9);
 
-        // Выключаем камеру и показываем загрузку ИИ
         stopAllCameras();
         document.getElementById('camera-wrapper').style.display = 'none';
         document.getElementById('capture-ocr-btn').style.display = 'none';
         loader.style.display = 'block';
-        loaderText.innerText = "Нейросеть считывает модель и бренд... (Обычно 3-7 секунд)";
+        loaderText.innerText = "Нейросеть считывает текст... (3-5 сек)";
+
+        // Проверяем, загружена ли библиотека Tesseract
+        if (typeof Tesseract === 'undefined') {
+            alert("ИИ-модуль текста временно недоступен без интернета. Введите параметры вручную.");
+            tempMonitorData.brand = "";
+            tempMonitorData.model = "";
+            openCardEditor();
+            return;
+        }
 
         try {
-            // Запуск ИИ распознавания текста (используем Английский + Русский языки)
             const result = await Tesseract.recognize(imageBlob, 'eng+rus', {
                 logger: m => {
                     if (m.status === 'recognizing') {
@@ -410,53 +431,41 @@
                 }
             });
 
-            const fullText = result.data.text;
-            console.log("Распознанный текст шильдика:\n", fullText);
-
-            // Обрабатываем полученный ИИ текст
-            parseMonitorText(fullText);
-
-            // Заполняем форму и переходим к проверке карточки
-            document.getElementById('monitor-brand').value = tempMonitorData.brand;
-            document.getElementById('monitor-model').value = tempMonitorData.model;
-            document.getElementById('monitor-serial').value = tempMonitorData.serial;
-
-            showScreen('screen-card');
+            parseMonitorText(result.data.text);
+            openCardEditor();
 
         } catch (ocrError) {
             console.error("Ошибка OCR: ", ocrError);
-            alert("Не удалось распознать текст. Попробуем еще раз.");
-            startModelCamera(); // Перезапуск при ошибке
+            alert("Не удалось считать текст автоматически.");
+            openCardEditor();
         }
     }
 
-    // Простой алгоритм интеллектуального разбора текста шильдика
+    function openCardEditor() {
+        document.getElementById('monitor-brand').value = tempMonitorData.brand || "";
+        document.getElementById('monitor-model').value = tempMonitorData.model || "";
+        document.getElementById('monitor-serial').value = tempMonitorData.serial || "";
+        showScreen('screen-card');
+    }
+
     function parseMonitorText(text) {
         if (!text) return;
-
         const upperText = text.toUpperCase();
-
-        // 1. Попытка угадать производителя по ключевым словам
-        const brands = ['SAMSUNG', 'LG', 'ASUS', 'ACER', 'DELL', 'HP', 'BENQ', 'AOC', 'PHILIPS', 'MSI', 'GIGABYTE', 'XIAOMI', 'HUAWEI', 'LENOVO'];
-        let foundBrand = '';
+        const brands = ['SAMSUNG', 'LG', 'ASUS', 'ACER', 'DELL', 'HP', 'BENQ', 'AOC', 'PHILIPS', 'MSI', 'GIGABYTE', 'XIAOMI', 'LENOVO'];
         
+        let foundBrand = '';
         for (let b of brands) {
-            if (upperText.includes(b)) {
-                foundBrand = b;
-                break;
-            }
+            if (upperText.includes(b)) { foundBrand = b; break; }
         }
-        tempMonitorData.brand = foundBrand || "Не определен (введите вручную)";
+        tempMonitorData.brand = foundBrand || "";
 
-        // 2. Ищем модель (после MODEL, M/N, MODEL NO или ID)
         let foundModel = '';
         const modelRegex = /(?:MODEL|M\/N|MODEL NO|ID)[:\s]+([A-Z0-9\-_]{4,15})/i;
         const match = text.match(modelRegex);
         
         if (match && match[1]) {
-            foundModel = match[1].trim();
+            foundModel = match[1];
         } else {
-            // Если паттерн не найден, берем самую длинную строку из букв и цифр (похоже на модель)
             const lines = text.split('\n');
             for (let line of lines) {
                 const cleanLine = line.replace(/[^A-Z0-9\-_]/ig, '').trim();
@@ -466,27 +475,25 @@
                 }
             }
         }
-        tempMonitorData.model = foundModel || "Не определена (введите вручную)";
+        tempMonitorData.model = foundModel || "";
     }
 
-    // Сохранение карточки в localStorage
+    // --- СОХРАНЕНИЕ И БАЗА ДАННЫХ ---
     function saveMonitorData() {
         const brand = document.getElementById('monitor-brand').value.trim();
         const model = document.getElementById('monitor-model').value.trim();
         const serial = document.getElementById('monitor-serial').value.trim();
 
         if (!brand || !model || !serial) {
-            alert("Все поля должны быть заполнены перед сохранением!");
+            alert("Заполните поля производителя, модели и серийного номера!");
             return;
         }
 
-        const monitorNode = { brand, model, serial };
-
         let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
-        db.unshift(monitorNode);
+        db.unshift({ brand, model, serial });
         localStorage.setItem('monitors_db', JSON.stringify(db));
 
-        alert("Карточка успешно добавлена в базу данных!");
+        alert("Успешно сохранено!");
         goToMain();
     }
 
@@ -511,16 +518,14 @@
                 <td><strong>${escapeHtml(monitor.model)}</strong></td>
                 <td><code style="background:#1c2a38; padding:3px 6px; border-radius:4px;">${escapeHtml(monitor.serial)}</code></td>
                 <td>${escapeHtml(monitor.brand)}</td>
-                <td>
-                    <button class="btn btn-danger btn-sm" onclick="deleteMonitor(${index})">🗑️</button>
-                </td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteMonitor(${index})">🗑️</button></td>
             `;
             tbody.appendChild(row);
         });
     }
 
     function deleteMonitor(index) {
-        if (confirm("Удалить выбранную карточку монитора?")) {
+        if (confirm("Удалить карточку?")) {
             let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
             db.splice(index, 1);
             localStorage.setItem('monitors_db', JSON.stringify(db));
@@ -529,43 +534,29 @@
     }
 
     function clearDatabase() {
-        if (confirm("Вы уверены, что хотите ПОЛНОСТЬЮ стереть всю базу данных?")) {
+        if (confirm("Очистить всю базу?")) {
             localStorage.removeItem('monitors_db');
             renderTable();
         }
     }
 
-    // Сборка таблицы для Word (Порядок колонок: Модель | Серийный номер | Производитель)
     function copyTableToClipboard() {
         const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
-        if (db.length === 0) {
-            alert("Копировать нечего, база пуста.");
-            return;
-        }
+        if (db.length === 0) { alert("База пуста"); return; }
 
         let textForWord = "Модель\tСерийный номер\tПроизводитель\n";
-        
-        db.forEach(m => {
-            textForWord += `${m.model}\t${m.serial}\t${m.brand}\n`;
-        });
+        db.forEach(m => { textForWord += `${m.model}\t${m.serial}\t${m.brand}\n`; });
 
         navigator.clipboard.writeText(textForWord).then(() => {
-            alert("Таблица успешно скопирована в буфер обмена! Откройте Microsoft Word и нажмите 'Вставить' (Ctrl+V).");
-        }).catch(err => {
-            console.error(err);
-            alert("Не удалось скопировать автоматически. Выделите текст таблицы на экране вручную.");
-        });
+            alert("Скопировано! Вставьте в Word (Ctrl+V).");
+        }).catch(() => { alert("Ошибка буфера обмена."); });
     }
 
     function escapeHtml(text) {
         if (!text) return '';
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 </script>
 </body>
 </html>
+
