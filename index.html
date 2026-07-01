@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Монитор Эксперт ИИ</title>
+    <title>Монитор Эксперт Автономный ИИ</title>
     
-    <!-- Подключаем нейросеть распознавания текста (OCR) для анализа наклейки модели -->
-    <script src="https://unpkg.com"></script>
+    <!-- Подключаем автономный ИИ модуль распознавания текста, который стабильно работает без блокировок -->
+    <script src="https://jsdelivr.net"></script>
 
     <style>
-        /* Telegram Dark Theme Colors */
+        /* Telegram Dark Theme */
         :root {
             --bg-color: #182533;
             --secondary-bg: #202b36;
@@ -50,7 +50,7 @@
 
         h1, h2 {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-weight: 500;
         }
 
@@ -87,7 +87,8 @@
         .btn-danger { background-color: var(--danger-color); }
         .btn-secondary { background-color: #505c6b; }
 
-        .camera-box {
+        /* Контейнер камеры с маской обрезки */
+        .camera-container-box {
             position: relative;
             width: 100%;
             aspect-ratio: 4/3;
@@ -97,10 +98,42 @@
             margin-bottom: 15px;
         }
 
-        video, canvas {
+        video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        /* Полупрозрачная рамка-прицел для ИИ-обрезки */
+        .crop-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            box-shadow: inset 0 0 0 40px rgba(0, 0, 0, 0.6); /* Затемнение фона вокруг центра */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crop-frame {
+            width: calc(100% - 80px);
+            height: calc(100% - 120px);
+            border: 2px dashed var(--button-bg);
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(47, 110, 165, 0.5);
+            position: relative;
+        }
+
+        /* Метка по центру прицела */
+        .crop-frame::before {
+            content: "ПОМЕСТИТЕ ТЕКСТ СЮДА";
+            position: absolute;
+            bottom: -25px; left: 50%;
+            transform: translateX(-50%);
+            color: var(--text-muted);
+            font-size: 11px;
+            letter-spacing: 1px;
+            white-space: nowrap;
         }
 
         .loader {
@@ -123,9 +156,7 @@
             margin: 0 auto 10px;
         }
 
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 14px; }
@@ -140,74 +171,84 @@
     </style>
 </head>
 <body>
-
 <div class="container">
     
     <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
     <div id="screen-main" class="screen active">
-        <h1>Монитор Эксперт ИИ</h1>
-        <div style="text-align: center; color: var(--text-muted); margin-bottom: 20px; font-size: 14px;">Автономное фотографирование и ИИ-анализ наклейки</div>
+        <h1>Монитор Эксперт</h1>
+        <div style="text-align: center; color: var(--text-muted); margin-bottom: 20px; font-size: 14px;">Автономное кадрирование и ИИ-распознавание</div>
         <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 30px;">
             <button class="btn" onclick="startBarcodeScan()">➕ Добавить монитор</button>
             <button class="btn btn-secondary" onclick="openDatabase()">📁 База данных</button>
         </div>
     </div>
-    <!-- ЭКРАН 2: ФОТОГРАФИЯ ШТРИХКОДА СЕРИЙНОГО НОМЕРА -->
+    <!-- ЭКРАН 2: СЪЕМКА И КАДРИРОВАНИЕ ШТРИХКОДА СЕРИЙНОГО НОМЕРА -->
     <div id="screen-barcode" class="screen">
-        <h2>Фото штрихкода (С/Н)</h2>
+        <h2>Фото серийного номера</h2>
         <p style="color: var(--text-muted); text-align:center; margin-bottom:15px; font-size:14px;">
-            Сфотографируйте штрихкод серийного номера крупно и четко
+            Поместите буквенно-цифровой серийный номер строго внутрь рамки
         </p>
-        <div class="camera-box">
-            <video id="barcode-video" autoplay playsinline></video>
+        
+        <div id="serial-loader" class="loader">
+            <div class="spinner"></div>
+            <div id="serial-loader-text">Распознавание серийного номера...</div>
         </div>
-        <button class="btn" onclick="acceptBarcodeManually()">📸 Сделать снимок штрихкода</button>
+
+        <div class="camera-container-box" id="serial-camera-wrapper">
+            <video id="barcode-video" autoplay playsinline></video>
+            <div class="crop-overlay">
+                <div class="crop-frame"></div>
+            </div>
+        </div>
+        <button class="btn" id="serial-capture-btn" onclick="captureAndProcessStep('serial')">📸 Распознать серийный номер</button>
         <button class="btn btn-secondary" onclick="goToMain()" style="margin-top: 10px;">Отмена</button>
     </div>
 
-    <!-- ЭКРАН 3: КАМЕРА ДЛЯ СЧИТЫВАНИЯ МОДЕЛИ (ИИ-OCR) -->
+    <!-- ЭКРАН 3: СЪЕМКА И КАДРИРОВАНИЕ НАКЛЕЙКИ МОДЕЛИ -->
     <div id="screen-camera" class="screen">
-        <h2>Снимок наклейки модели</h2>
+        <h2>Фото модели и бренда</h2>
         <p style="color: var(--text-muted); text-align:center; margin-bottom:15px; font-size:14px;">
-            Направьте камеру на текст с моделью и производителем. Сделайте четкий снимок.
+            Поместите текст с моделью монитора строго внутрь рамки
         </p>
         
-        <!-- Индикатор работы нейросети -->
         <div id="ocr-loader" class="loader">
             <div class="spinner"></div>
-            <div id="loader-text">Нейросеть Tesseract.js инициализируется...</div>
+            <div id="loader-text">Распознавание модели и бренда...</div>
         </div>
 
-        <div class="camera-box" id="camera-wrapper">
+        <div class="camera-container-box" id="camera-wrapper">
             <video id="camera-video" autoplay playsinline></video>
+            <div class="crop-overlay">
+                <div class="crop-frame"></div>
+            </div>
         </div>
         
-        <button class="btn" id="capture-ocr-btn" onclick="captureAndRecognizeText()">📸 Сделать снимок модели</button>
-        <button class="btn btn-secondary" onclick="restartStep('barcode')" style="margin-top: 10px;">↩️ Назад к штрихкоду</button>
+        <button class="btn" id="capture-ocr-btn" onclick="captureAndProcessStep('model')">📸 Распознать модель с фото</button>
+        <button class="btn btn-secondary" onclick="restartStep('barcode')" style="margin-top: 10px;">↩️ Переснять серийник (Ошибка)</button>
     </div>
 
-    <!-- ЭКРАН 4: ИТОГОВАЯ КАРТОЧКА С РЕЗУЛЬТАТАМИ ИИ -->
+    <!-- ЭКРАН 4: ИТОГОВАЯ КАРТОЧКА ПАРАМЕТРОВ -->
     <div id="screen-card" class="screen">
-        <h2>Параметры монитора (ИИ)</h2>
+        <h2>Параметры монитора</h2>
         <p style="color: var(--success-color); text-align:center; margin-bottom:15px; font-size:13px;">
-            ✨ Данные автоматически извлечены нейросетью. Проверьте их.
+            ✨ Данные считаны и кадрированы. Проверьте их.
         </p>
         
         <div class="form-group">
             <label>Производитель (Brand)</label>
-            <input type="text" id="monitor-brand" placeholder="Введите руками, если не распозналось">
+            <input type="text" id="monitor-brand" placeholder="Бренд">
         </div>
         <div class="form-group">
             <label>Модель монитора (Model)</label>
-            <input type="text" id="monitor-model" placeholder="Введите руками, если не распозналось">
+            <input type="text" id="monitor-model" placeholder="Модель">
         </div>
         <div class="form-group">
             <label>Серийный номер (S/N)</label>
-            <input type="text" id="monitor-serial" readonly style="color: var(--text-muted); background: rgba(0,0,0,0.2);">
+            <input type="text" id="monitor-serial" placeholder="Серийный номер">
         </div>
         
         <button class="btn" onclick="saveMonitorData()">💾 Сохранить в базу</button>
-        <button class="btn btn-secondary" onclick="restartStep('camera')" style="margin-top: 10px;">↩️ Переснять фото модели (Ошибка)</button>
+        <button class="btn btn-secondary" onclick="restartStep('camera')" style="margin-top: 10px;">↩️ Переснять модель (Ошибка)</button>
         <button class="btn btn-danger" onclick="goToMain()" style="margin-top: 10px;">Сбросить и выйти</button>
     </div>
 
@@ -225,13 +266,13 @@
                 <thead>
                     <tr>
                         <th>Модель</th>
-                        <th>Серийный номер (Фото)</th>
+                        <th>Серийный номер</th>
                         <th>Производитель</th>
                         <th>Удалить</th>
                     </tr>
                 </thead>
                 <tbody id="database-tbody">
-                    <!-- Заполняется динамически через JS -->
+                    <!-- Заполняется динамически -->
                 </tbody>
             </table>
         </div>
@@ -241,16 +282,15 @@
 
 </div> <!-- Конец контейнера -->
 
-<!-- Скрытый холст для захвата кадров и передачи их в ИИ -->
+<!-- Скрытый холст для вырезания фрагментов по рамке -->
 <canvas id="hidden-canvas" style="display:none;"></canvas>
 
 <script>
     let currentStream = null;
 
-    // Объявляем переменную черновика в самом верху скрипта
+    // Структура черновика для букв и цифр
     let tempMonitorData = {
-        barcodePhoto: '',
-        modelPhoto: '',
+        serial: '',
         brand: '',
         model: ''
     };
@@ -283,7 +323,7 @@
         stopCamera();
         try {
             currentStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: "environment" }, width: 1280, height: 720 },
+                video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
                 audio: false
             });
             document.getElementById(videoId).srcObject = currentStream;
@@ -301,33 +341,11 @@
         }
     }
 
-    // ШАГ 1: Запуск экрана для фото штрихкода
+    // ШАГ 1: Запуск экрана для фото и чтения серийника
     function startBarcodeScan() {
-        tempMonitorData = { barcodePhoto: '', modelPhoto: '', brand: '', model: '' };
+        tempMonitorData = { serial: '', brand: '', model: '' };
         showScreen('screen-barcode');
         startCamera('barcode-video');
-    }
-
-    // Снимок штрихкода по кнопке (без автодетекции)
-    function acceptBarcodeManually() {
-        const video = document.getElementById('barcode-video');
-        const canvas = document.getElementById('hidden-canvas');
-        const context = canvas.getContext('2d');
-
-        if (!video.srcObject) {
-            alert("Камера не готова.");
-            return;
-        }
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Переводим в строку и сохраняем фото штрихкода
-        tempMonitorData.barcodePhoto = canvas.toDataURL('image/jpeg', 0.6);
-
-        // Переходим к съемке модели монитора
-        startModelCamera();
     }
 
     // ШАГ 2: Запуск экрана для фото наклейки модели
@@ -339,43 +357,62 @@
         
         startCamera('camera-video');
     }
-    // Снимок модели и запуск анализа нейросетью Tesseract.js
-    async function captureAndRecognizeText() {
-        const video = document.getElementById('camera-video');
+
+    // Функция точной обрезки изображения по размерам рамки-прицела
+    function cropImageFromVideo(videoElement, canvasElement) {
+        const context = canvasElement.getContext('2d');
+        
+        // Получаем реальные размеры видеопотока
+        const videoWidth = videoElement.videoWidth;
+        const videoHeight = videoElement.videoHeight;
+
+        // Рассчитываем пропорции рамки (в стилях: отступы по 40px слева/справа и по 60px сверху/снизу)
+        // Обрезаем центральную область кадра, отсекая текстовый шум по краям
+        const cropWidth = videoWidth * 0.75;
+        const cropHeight = videoHeight * 0.60;
+        const cropX = (videoWidth - cropWidth) / 2;
+        const cropY = (videoHeight - cropHeight) / 2;
+
+        canvasElement.width = cropWidth;
+        canvasElement.height = cropHeight;
+
+        // Вырезаем нужный кусок из видео и переносим на скрытый холст
+        context.drawImage(
+            videoElement, 
+            cropX, cropY, cropWidth, cropHeight, 
+            0, 0, cropWidth, cropHeight
+        );
+
+        return canvasElement.toDataURL('image/jpeg', 0.9);
+    }
+    // Универсальная функция захвата кадра и ИИ-обработки шага
+    async function captureAndProcessStep(type) {
+        const isSerial = (type === 'serial');
+        const video = document.getElementById(isSerial ? 'barcode-video' : 'camera-video');
         const canvas = document.getElementById('hidden-canvas');
-        const context = canvas.getContext('2d');
-        const loader = document.getElementById('ocr-loader');
-        const loaderText = document.getElementById('loader-text');
+        const loader = document.getElementById(isSerial ? 'serial-loader' : 'ocr-loader');
+        const loaderText = document.getElementById(isSerial ? 'serial-loader-text' : 'loader-text');
+        const wrapper = document.getElementById(isSerial ? 'serial-camera-wrapper' : 'camera-wrapper');
+        const btn = document.getElementById(isSerial ? 'serial-capture-btn' : 'capture-ocr-btn');
 
         if (!video.srcObject) {
             alert("Камера не готова.");
             return;
         }
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Сохраняем фото модели в черновик
-        tempMonitorData.modelPhoto = canvas.toDataURL('image/jpeg', 0.6);
+        // Обрезаем только ту часть изображения, которая попала в прицел рамки
+        const croppedImageBase64 = cropImageFromVideo(video, canvas);
 
-        // Отключаем камеру и включаем экран загрузки ИИ
+        // Гасим камеру и включаем анимацию ИИ-анализа
         stopCamera();
-        document.getElementById('camera-wrapper').style.display = 'none';
-        document.getElementById('capture-ocr-btn').style.display = 'none';
+        wrapper.style.display = 'none';
+        btn.style.display = 'none';
         loader.style.display = 'block';
-        loaderText.innerText = "Нейросеть считывает текст... (3-5 сек)";
-
-        // Защита: проверка доступности библиотеки ИИ
-        if (typeof Tesseract === 'undefined') {
-            alert("ИИ-модуль текста недоступен. Заполните параметры вручную.");
-            openCardEditor();
-            return;
-        }
+        loaderText.innerText = "ИИ считывает буквы и цифры... (3-5 сек)";
 
         try {
-            // Анализируем фото модели через встроенную нейросеть
-            const result = await Tesseract.recognize(tempMonitorData.modelPhoto, 'eng+rus', {
+            // Запуск автономного OCR ядра (поддержка английского языка + цифр)
+            const result = await Tesseract.recognize(croppedImageBase64, 'eng', {
                 logger: m => {
                     if (m.status === 'recognizing') {
                         loaderText.innerText = `Анализ текста: ${Math.floor(m.progress * 100)}%`;
@@ -383,74 +420,104 @@
                 }
             });
 
-            // Извлекаем из текста модель и бренд
-            parseMonitorText(result.data.text);
-            openCardEditor();
+            const recognizedText = result.data.text;
+            console.log(`[ИИ Успех] Считано с кадра (${type}):\n`, recognizedText);
+
+            if (isSerial) {
+                // Извлекаем и чистим серийный номер от пробелов и мусора
+                tempMonitorData.serial = cleanTextForData(recognizedText, 'serial');
+                // Переходим ко второму шагу — съемке модели монитора
+                startModelCamera();
+            } else {
+                // Извлекаем модель и производителя со второй картинки
+                parseMonitorText(recognizedText);
+                
+                // Передаем все ИИ данные в итоговую форму-карточку
+                document.getElementById('monitor-brand').value = tempMonitorData.brand || "";
+                document.getElementById('monitor-model').value = tempMonitorData.model || "";
+                document.getElementById('monitor-serial').value = tempMonitorData.serial || "Не считан";
+                
+                showScreen('screen-card');
+            }
 
         } catch (ocrError) {
-            console.error("Ошибка OCR: ", ocrError);
-            alert("Не удалось считать текст автоматически. Заполните карточку вручную.");
-            openCardEditor();
+            console.error("Ошибка ИИ-анализа: ", ocrError);
+            alert("Не удалось разобрать символы автоматически. Переснимите или введите вручную.");
+            if (isSerial) startBarcodeScan(); else startModelCamera();
         }
     }
 
-    // Переход в карточку параметров монитора
-    function openCardEditor() {
-        document.getElementById('monitor-brand').value = tempMonitorData.brand || "";
-        document.getElementById('monitor-model').value = tempMonitorData.model || "";
-        document.getElementById('monitor-serial').value = "[Штрихкод сохранен как фото]";
-        showScreen('screen-card');
+    // Очистка и фильтрация текста под стандарты серийников и моделей
+    function cleanTextForData(text, mode) {
+        if (!text) return '';
+        let clean = text.replace(/[\r\n\t]/g, ' ').trim();
+        
+        if (mode === 'serial') {
+            // Пытаемся вытащить буквенно-цифровой блок (например после S/N или просто самую длинную комбинацию)
+            const snMatch = clean.match(/(?:S\/N|SERIAL|NO)[:\s]*([A-Z0-9]{6,15})/i);
+            if (snMatch && snMatch[1]) return snMatch[1].toUpperCase();
+            
+            // Если меток нет, берем самую длинную строку из букв и цифр, отсекая знаки препинания
+            const words = clean.split(' ');
+            let longestToken = '';
+            for (let word of words) {
+                let token = word.replace(/[^A-Z0-9]/ig, '');
+                if (token.length > longestToken.length) longestToken = token;
+            }
+            return longestToken.toUpperCase();
+        }
+        return clean;
     }
 
-    // Алгоритм разбора текста шильдика (ищет бренд и модель)
+    // Алгоритм разбора наклейки параметров (Бренд и Модель)
     function parseMonitorText(text) {
         if (!text) return;
-        const upperText = text.toUpperCase();
-        const brands = ['SAMSUNG', 'LG', 'ASUS', 'ACER', 'DELL', 'HP', 'BENQ', 'AOC', 'PHILIPS', 'MSI', 'GIGABYTE', 'XIAOMI', 'LENOVO'];
+        const clean = text.replace(/[\r\n]/g, ' ');
+        const upperText = clean.toUpperCase();
         
+        // Поиск бренда из списка популярных производителей
+        const brands = ['SAMSUNG', 'LG', 'ASUS', 'ACER', 'DELL', 'HP', 'BENQ', 'AOC', 'PHILIPS', 'MSI', 'GIGABYTE', 'XIAOMI', 'LENOVO'];
         let foundBrand = '';
         for (let b of brands) {
             if (upperText.includes(b)) { foundBrand = b; break; }
         }
-        tempMonitorData.brand = foundBrand || "";
+        tempMonitorData.brand = foundBrand || "Не определен";
 
+        // Поиск модели по регулярному выражению или ключевым токенам
         let foundModel = '';
-        const modelRegex = /(?:MODEL|M\/N|MODEL NO|ID)[:\s]+([A-Z0-9\-_]{4,15})/i;
-        const match = text.match(modelRegex);
-        
-        if (match && match[1]) {
-            foundModel = match[1];
+        const modelMatch = text.match(/(?:MODEL|M\/N|MODEL NO)[:\s]+([A-Z0-9\-_]{4,15})/i);
+        if (modelMatch && modelMatch[1]) {
+            foundModel = modelMatch[1];
         } else {
-            const lines = text.split('\n');
-            for (let line of lines) {
-                const cleanLine = line.replace(/[^A-Z0-9\-_]/ig, '').trim();
-                if (cleanLine.length >= 5 && cleanLine.length <= 12 && !cleanLine.includes(foundBrand)) {
-                    foundModel = cleanLine;
+            // Резервный поиск кода модели (длинные строки с цифрами и буквами)
+            const tokens = clean.split(' ');
+            for (let t of tokens) {
+                let token = t.replace(/[^A-Z0-9\-_]/ig, '').trim();
+                if (token.length >= 5 && token.length <= 12 && !token.includes(foundBrand)) {
+                    foundModel = token;
                     break;
                 }
             }
         }
-        tempMonitorData.model = foundModel || "";
+        tempMonitorData.model = foundModel.toUpperCase() || "Не определена";
     }
 
-    // --- СОХРАНЕНИЕ И БАЗА ДАННЫХ ---
+    // --- БАЗА ДАННЫХ И ЭКСПОРТ ---
     function saveMonitorData() {
         const brand = document.getElementById('monitor-brand').value.trim();
         const model = document.getElementById('monitor-model').value.trim();
+        const serial = document.getElementById('monitor-serial').value.trim();
 
-        if (!brand || !model) {
-            alert("Заполните поля производителя и модели перед сохранением!");
+        if (!brand || !model || !serial) {
+            alert("Заполните все три поля перед сохранением!");
             return;
         }
 
-        tempMonitorData.brand = brand;
-        tempMonitorData.model = model;
-
         let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
-        db.unshift({...tempMonitorData}); // Клонируем черновик и добавляем вверх
+        db.unshift({ brand, model, serial });
         localStorage.setItem('monitors_db', JSON.stringify(db));
 
-        alert("Карточка успешно сохранена!");
+        alert("Карточка успешно добавлена в базу!");
         goToMain();
     }
 
@@ -473,11 +540,7 @@
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><strong>${escapeHtml(monitor.model)}</strong></td>
-                <td>
-                    <span style="color:var(--success-color); font-size:12px; cursor:pointer; text-decoration:underline;" onclick="viewBarcodePhoto(${index})">
-                        📸 Посмотреть фото С/Н
-                    </span>
-                </td>
+                <td><code style="background:#1c2a38; padding:3px 6px; border-radius:4px;">${escapeHtml(monitor.serial)}</code></td>
                 <td>${escapeHtml(monitor.brand)}</td>
                 <td><button class="btn btn-danger btn-sm" onclick="deleteMonitor(${index})">🗑️</button></td>
             `;
@@ -485,24 +548,8 @@
         });
     }
 
-    // Просмотр фотографии штрихкода по клику из таблицы
-    window.viewBarcodePhoto = function(index) {
-        const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
-        const monitor = db[index];
-        if (monitor && monitor.barcodePhoto) {
-            const newWindow = window.open();
-            newWindow.document.write(`
-                <body style="background:#182533; display:flex; justify-content:center; align-items:center; min-height:100vh; margin:0;">
-                    <img src="${monitor.barcodePhoto}" style="max-width:90%; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.5);" alt="Штрихкод">
-                </body>
-            `);
-        } else {
-            alert("Фото штрихкода не найдено.");
-        }
-    };
-
     function deleteMonitor(index) {
-        if (confirm("Удалить карточку монитора?")) {
+        if (confirm("Удалить выбранный монитор из базы?")) {
             let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
             db.splice(index, 1);
             localStorage.setItem('monitors_db', JSON.stringify(db));
@@ -511,27 +558,26 @@
     }
 
     function clearDatabase() {
-        if (confirm("Вы уверены, что хотите полностью очистить всю базу данных?")) {
+        if (confirm("Вы уверены, что хотите ПОЛНОСТЬЮ стереть всю базу данных мониторов?")) {
             localStorage.removeItem('monitors_db');
             renderTable();
         }
     }
 
-    // Сборка структурированного текста для копирования в Microsoft Word
     function copyTableToClipboard() {
         const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
         if (db.length === 0) { alert("База данных пуста."); return; }
 
-        // Колонки по ТЗ: Модель -> Серийный номер -> Производитель
+        // Колонки строго по ТЗ: Модель -> Серийный номер -> Производитель
         let textForWord = "Модель\tСерийный номер\tПроизводитель\n";
         db.forEach(m => { 
-            textForWord += `${m.model}\t[Фото штрихкода серийного номера сохранено в приложении]\t${m.brand}\n`; 
+            textForWord += `${m.model}\t${m.serial}\t${m.brand}\n`; 
         });
 
         navigator.clipboard.writeText(textForWord).then(() => {
-            alert("Таблица успешно скопирована в буфер обмена! Откройте Word и просто нажмите Ctrl+V (Вставить).");
+            alert("Таблица скопирована в буфер обмена в текстовом формате для Microsoft Word (с разделением табуляцией). Теперь просто вставьте её (Ctrl+V) в документ!");
         }).catch(() => { 
-            alert("Ошибка буфера обмена. Не удалось скопировать данные автоматически."); 
+            alert("Ошибка буфера обмена. Разрешите сайту доступ к копированию."); 
         });
     }
 
