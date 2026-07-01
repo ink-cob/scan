@@ -116,8 +116,12 @@
         }
 
         .crop-frame {
-            width: calc(100% - 80px);
-            height: calc(100% - 120px);
+    width: calc(100% - 80px);    /* Ширина остается широкой */
+    height: calc(100% - 220px);  /* Увеличиваем отступ, чтобы рамка стала узкой полоской */
+    border: 2px dashed var(--button-bg);
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(47, 110, 165, 0.5);
+    position: relative;
             border: 2px dashed var(--button-bg);
             border-radius: 4px;
             box-shadow: 0 0 10px rgba(47, 110, 165, 0.5);
@@ -369,7 +373,7 @@
         // Рассчитываем пропорции рамки (в стилях: отступы по 40px слева/справа и по 60px сверху/снизу)
         // Обрезаем центральную область кадра, отсекая текстовый шум по краям
         const cropWidth = videoWidth * 0.75;
-        const cropHeight = videoHeight * 0.60;
+        const cropHeight = videoHeight * 0.20;
         const cropX = (videoWidth - cropWidth) / 2;
         const cropY = (videoHeight - cropHeight) / 2;
 
