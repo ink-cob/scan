@@ -389,7 +389,7 @@
 
         return canvasElement.toDataURL('image/jpeg', 0.9);
     }
-    // Универсальная функция захвата кадра и ИИ-обработки шага
+        // ОПТИМИЗИРОВАННАЯ ФУНКЦИЯ: Быстрый захват кадра и ИИ-обработка
     async function captureAndProcessStep(type) {
         const isSerial = (type === 'serial');
         const video = document.getElementById(isSerial ? 'barcode-video' : 'camera-video');
@@ -412,11 +412,12 @@
         wrapper.style.display = 'none';
         btn.style.display = 'none';
         loader.style.display = 'block';
-        loaderText.innerText = "ИИ считывает буквы и цифры... (3-5 сек)";
+        loaderText.innerText = "ИИ считывает символы... (Обычно 2-3 сек)";
 
         try {
-            // Запуск автономного OCR ядра (поддержка английского языка + цифр)
-            const result = await Tesseract.recognize(croppedImageBase64, 'eng', {
+            // Создаем легковесный ИИ-воркер Tesseract
+            const worker = await Tesseract.createWorker({
+                cacheMethod: 'readOnly', // Запрещаем скачивать лишнее из сети
                 logger: m => {
                     if (m.status === 'recognizing') {
                         loaderText.innerText = `Анализ текста: ${Math.floor(m.progress * 100)}%`;
@@ -424,17 +425,30 @@
                 }
             });
 
-            const recognizedText = result.data.text;
-            console.log(`[ИИ Успех] Считано с кадра (${type}):\n`, recognizedText);
+            // Настраиваем ИИ только на английские буквы и цифры (убираем тяжелые словари)
+            await worker.loadLanguage('eng');
+            await worker.initialize('eng');
+            
+            // Включаем супер-быстрый режим распознавания отдельных символов без разбора грамматики
+            await worker.setParameters({
+                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK, // Анализируем как один блок текста
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_/:' // Распознаем только эти знаки
+            });
+
+            // Запускаем моментальное распознавание по вырезанной картинке
+            const { data: { text } } = await worker.recognize(croppedImageBase64);
+            await worker.terminate(); // Сразу выгружаем ИИ из памяти телефона, чтобы он не тормозил
+
+            console.log(`[ИИ Успех] Считано с кадра (${type}):\n`, text);
 
             if (isSerial) {
                 // Извлекаем и чистим серийный номер от пробелов и мусора
-                tempMonitorData.serial = cleanTextForData(recognizedText, 'serial');
+                tempMonitorData.serial = cleanTextForData(text, 'serial');
                 // Переходим ко второму шагу — съемке модели монитора
                 startModelCamera();
             } else {
                 // Извлекаем модель и производителя со второй картинки
-                parseMonitorText(recognizedText);
+                parseMonitorText(text);
                 
                 // Передаем все ИИ данные в итоговую форму-карточку
                 document.getElementById('monitor-brand').value = tempMonitorData.brand || "";
@@ -446,8 +460,14 @@
 
         } catch (ocrError) {
             console.error("Ошибка ИИ-анализа: ", ocrError);
-            alert("Не удалось разобрать символы автоматически. Переснимите или введите вручную.");
-            if (isSerial) startBarcodeScan(); else startModelCamera();
+            alert("Не удалось разобрать символы автоматически. Введите данные вручную в карточке.");
+            // Вместо зависания сразу пускаем пользователя в редактор
+            if (isSerial) {
+                tempMonitorData.serial = "Ошибка сканирования";
+                startModelCamera();
+            } else {
+                openCardEditor();
+            }
         }
     }
 
@@ -457,11 +477,9 @@
         let clean = text.replace(/[\r\n\t]/g, ' ').trim();
         
         if (mode === 'serial') {
-            // Пытаемся вытащить буквенно-цифровой блок (например после S/N или просто самую длинную комбинацию)
             const snMatch = clean.match(/(?:S\/N|SERIAL|NO)[:\s]*([A-Z0-9]{6,15})/i);
             if (snMatch && snMatch[1]) return snMatch[1].toUpperCase();
             
-            // Если меток нет, берем самую длинную строку из букв и цифр, отсекая знаки препинания
             const words = clean.split(' ');
             let longestToken = '';
             for (let word of words) {
@@ -479,7 +497,6 @@
         const clean = text.replace(/[\r\n]/g, ' ');
         const upperText = clean.toUpperCase();
         
-        // Поиск бренда из списка популярных производителей
         const brands = ['SAMSUNG', 'LG', 'ASUS', 'ACER', 'DELL', 'HP', 'BENQ', 'AOC', 'PHILIPS', 'MSI', 'GIGABYTE', 'XIAOMI', 'LENOVO'];
         let foundBrand = '';
         for (let b of brands) {
@@ -487,13 +504,11 @@
         }
         tempMonitorData.brand = foundBrand || "Не определен";
 
-        // Поиск модели по регулярному выражению или ключевым токенам
         let foundModel = '';
         const modelMatch = text.match(/(?:MODEL|M\/N|MODEL NO)[:\s]+([A-Z0-9\-_]{4,15})/i);
         if (modelMatch && modelMatch[1]) {
             foundModel = modelMatch[1];
         } else {
-            // Резервный поиск кода модели (длинные строки с цифрами и буквами)
             const tokens = clean.split(' ');
             for (let t of tokens) {
                 let token = t.replace(/[^A-Z0-9\-_]/ig, '').trim();
@@ -572,14 +587,13 @@
         const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
         if (db.length === 0) { alert("База данных пуста."); return; }
 
-        // Колонки строго по ТЗ: Модель -> Серийный номер -> Производитель
         let textForWord = "Модель\tСерийный номер\tПроизводитель\n";
         db.forEach(m => { 
             textForWord += `${m.model}\t${m.serial}\t${m.brand}\n`; 
         });
 
         navigator.clipboard.writeText(textForWord).then(() => {
-            alert("Таблица скопирована в буфер обмена в текстовом формате для Microsoft Word (с разделением табуляцией). Теперь просто вставьте её (Ctrl+V) в документ!");
+            alert("Таблица успешно скопирована! Откройте Word и нажмите Ctrl+V.");
         }).catch(() => { 
             alert("Ошибка буфера обмена. Разрешите сайту доступ к копированию."); 
         });
@@ -592,3 +606,4 @@
 </script>
 </body>
 </html>
+
