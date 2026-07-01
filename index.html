@@ -3,241 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет Мониторов со Сканером</title>
-    <!-- Настройки для работы на весь экран смартфона -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#1e1e2e">
-    
-    <!-- Подключаем официальную библиотеку для сканирования через камеру -->
+    <title>Инвентарь</title>
+    <script src="https://jsdelivr.net"></script>
     <script src="https://unpkg.com"></script>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1e1e2e;
-            color: #ffffff;
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .form-container {
-            background-color: #252538;
-            padding: 20px;
-            border-radius: 15px;
-            width: 100%;
-            max-width: 400px;
-            box-sizing: border-box;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
-        }
-        h2 { text-align: center; margin-top: 0; color: #a4b1cd; }
-        label { display: block; margin-top: 10px; font-size: 14px; color: #b4bbc9; }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin-top: 5px;
-            border: 1px solid #3f3f56;
-            border-radius: 8px;
-            background-color: #1e1e2e;
-            color: #fff;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        button {
-            width: 100%;
-            padding: 14px;
-            margin-top: 10px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn-camera { background-color: #9b59b6; color: white; margin-bottom: 15px; }
-        .btn-add { background-color: #2ecc71; color: white; margin-top: 15px; }
-        .btn-download { background-color: #3498db; color: white; }
-        
-        /* Стили для окна камеры */
-        #reader {
-            width: 100%;
-            background-color: #000;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
-            display: none; /* Скрыто по умолчанию */
-        }
-        
-        .table-container {
-            width: 100%;
-            max-width: 600px;
-            overflow-x: auto;
-            background-color: #252538;
-            border-radius: 10px;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            background-color: #fff;
-            color: #000;
-        }
-        th, td {
-            border: 1px solid #dddddd;
-            text-align: left;
-            padding: 8px;
-            font-size: 14px;
-        }
-        th { background-color: #f2f2f2; }
-    </style>
 </head>
-<body>
+<body class="bg-[#17212b] text-[#f5f5f5] p-4 font-sans text-sm">
 
-    <div class="form-container">
-        <h2>Добавить монитор</h2>
-        
-        <!-- Кнопка включения камеры -->
-        <button class="btn-camera" onclick="toggleCamera()">📷 Включить/Выключить камеру</button>
-        
-        <!-- Сюда будет выводиться изображение с камеры -->
-        <div id="reader"></div>
+    <div id="app" class="max-w-5xl mx-auto space-y-4">
+        <!-- Форма ввода в одну строку -->
+        <form @submit.prevent="add" class="bg-[#1e2c3a] p-3 rounded-lg border border-[#202b36] flex flex-wrap gap-2 items-center">
+            <input v-model="f.b" placeholder="Производитель" required class="flex-1 min-w-[150px] bg-[#17212b] p-2 rounded border border-[#2f3e4e] text-white focus:outline-none">
+            <input v-model="f.m" placeholder="Модель" required class="flex-1 min-w-[150px] bg-[#17212b] p-2 rounded border border-[#2f3e4e] text-white focus:outline-none">
+            <input v-model="f.s" placeholder="Серийный номер" required class="flex-1 min-w-[150px] bg-[#17212b] p-2 rounded border border-[#2f3e4e] text-white focus:outline-none">
+            <button type="submit" class="bg-[#5288c1] hover:bg-[#4374a5] px-4 py-2 rounded font-semibold text-white">Добавить ({{list.length}})</button>
+            <button v-if="list.length" type="button" @click="clearAll" class="text-xs text-[#e53935] hover:underline px-2">Очистить всё</button>
+        </form>
 
-        <label for="serialInput">Серийный номер:</label>
-        <input type="text" id="serialInput" placeholder="Сканируйте или введите...">
-        
-        <label for="modelInput">Модель (Вручную):</label>
-        <input type="text" id="modelInput" placeholder="Например, UltraSharp">
-        
-        <label for="brandInput">Производитель (Вручную):</label>
-        <input type="text" id="brandInput" placeholder="Например, Dell">
-        
-        <label for="pcInput">Номер компьютера (Вручную):</label>
-        <input type="text" id="pcInput" placeholder="Например, ПК-01">
-        
-        <button class="btn-add" onclick="addRow()">Добавить в таблицу</button>
-        <button class="btn-download" onclick="downloadWord()">Скачать для Word</button>
-    </div>
+        <!-- Подсказка для пользователя -->
+        <div v-if="list.length" class="text-xs text-[#8aa1b5] text-right">💡 Совет: выделите таблицу мышкой, нажмите Ctrl+C и вставьте в Word через Ctrl+V</div>
 
-    <div class="table-container">
-        <h3 style="margin:0; color:#a4b1cd;">Просмотр таблицы:</h3>
-        <table id="monitorTable">
-            <thead>
-                <tr>
-                    <th>Серийный номер</th>
-                    <th>Модель</th>
-                    <th>Производитель</th>
-                    <th>Номер компьютера</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Строки добавляются сюда -->
-            </tbody>
-        </table>
+        <!-- Полноценная таблица -->
+        <div v-if="list.length" class="bg-[#1e2c3a] rounded-lg border border-[#202b36] overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-[#17212b] text-[#8aa1b5] border-b border-[#202b36] text-xs uppercase">
+                        <th class="p-3 w-12 border border-[#202b36]">№</th>
+                        <th class="p-3 border border-[#202b36]">Производитель</th>
+                        <th class="p-3 border border-[#202b36]">Модель</th>
+                        <th class="p-3 border border-[#202b36]">Серийный номер</th>
+                        <th class="p-3 w-20 text-center border border-[#202b36] select-none">Удалить</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(item, i) in list" :key="i" class="hover:bg-[#24303f] border-b border-[#202b36]">
+                        <td class="p-3 font-mono text-xs text-[#8aa1b5] border border-[#202b36]">{{i+1}}</td>
+                        <td class="p-3 font-semibold text-white border border-[#202b36]">{{item.b}}</td>
+                        <td class="p-3 text-[#b9cbd9] border border-[#202b36]">{{item.m}}</td>
+                        <td class="p-3 font-mono text-xs border border-[#202b36]">{{item.s}}</td>
+                        <td class="p-3 text-center border border-[#202b36] select-none">
+                            <button @click="del(i)" class="text-[#e53935] hover:text-[#ff5252] hover:underline text-xs">Х</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        let html5QrcodeScanner = null;
+        const { createApp, ref } = Vue;
+        createApp({
+            setup() {
+                const list = ref(JSON.parse(localStorage.getItem('inv_data') || '[]'));
+                const f = ref({ b: '', m: '', s: '' });
 
-        // Функция запуска и остановки камеры
-        function toggleCamera() {
-            let readerDiv = document.getElementById("reader");
-            
-            if (readerDiv.style.display === "block") {
-                // Если камера включена — выключаем её
-                readerDiv.style.display = "none";
-                if (html5QrcodeScanner) {
-                    html5QrcodeScanner.stop().catch(err => console.log(err));
-                }
-            } else {
-                // Если выключена — включаем
-                readerDiv.style.display = "block";
-                
-                html5QrcodeScanner = new Html5Qrcode("reader");
-                
-                // Настройки сканера: ищем линейные штрихкоды (включая Code 128 серийников)
-                const config = { 
-                    fps: 10, 
-                    qrbox: { width: 280, height: 150 }, // Прямоугольное окно под штрихкод
-                    formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39, Html5QrcodeSupportedFormats.EAN_13 ]
+                const add = () => {
+                    list.value.push({ ...f.value });
+                    localStorage.setItem('inv_data', JSON.stringify(list.value));
+                    f.value = { b: '', m: '', s: '' }; // быстрая очистка формы
                 };
-                
-                // Запуск задней камеры телефона
-                html5QrcodeScanner.start(
-                    { facingMode: "environment" }, 
-                    config,
-                    onScanSuccess
-                ).catch(err => {
-                    alert("Ошибка доступа к камере. Разрешите браузеру использовать камеру.");
-                    readerDiv.style.display = "none";
-                });
+
+                const del = (i) => {
+                    list.value.splice(i, 1);
+                    localStorage.setItem('inv_data', JSON.stringify(list.value));
+                };
+
+                const clearAll = () => {
+                    if (confirm("Удалить ВСЕ записи из таблицы?")) {
+                        list.value = [];
+                        localStorage.removeItem('inv_data');
+                    }
+                };
+
+                return { list, f, add, del, clearAll };
             }
-        }
-
-        // Что происходит, когда камера успешно считала штрихкод
-        function onScanSuccess(decodedText, decodedResult) {
-            // 1. Вставляем текст штрихкода в поле Серийного номера
-            document.getElementById("serialInput").value = decodedText;
-            
-            // 2. Издаем короткий виброотклик (если поддерживает телефон)
-            if (navigator.vibrate) { navigator.vibrate(100); }
-            
-            // 3. Выключаем камеру, чтобы она не мешала заполнять остальные поля
-            toggleCamera();
-            
-            // 4. Переводим курсор на ввод Модели
-            document.getElementById("modelInput").focus();
-        }
-
-        // Функция добавления строки в таблицу
-        function addRow() {
-            let serial = document.getElementById("serialInput").value;
-            let model = document.getElementById("modelInput").value;
-            let brand = document.getElementById("brandInput").value;
-            let pc = document.getElementById("pcInput").value;
-
-            if (!serial) {
-                alert("Нет серийного номера!");
-                return;
-            }
-
-            let table = document.getElementById("monitorTable").getElementsByTagName('tbody')[0];
-            let newRow = table.insertRow();
-
-            newRow.insertCell(0).innerText = serial;
-            newRow.insertCell(1).innerText = model;
-            newRow.insertCell(2).innerText = brand;
-            newRow.insertCell(3).innerText = pc;
-
-            // Очищаем форму для новой записи
-            document.getElementById("serialInput").value = "";
-            document.getElementById("modelInput").value = "";
-            document.getElementById("brandInput").value = "";
-            document.getElementById("pcInput").value = "";
-        }
-
-        // Скачивание таблицы для Word
-        function downloadWord() {
-            let tableHTML = document.getElementById("monitorTable").outerHTML;
-            let wordSource = `
-                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://w3.org">
-                <head><style>table {border-collapse:collapse;} th,td {border:1px solid #000000; padding:5px; font-family:Arial; font-size:12pt;}</style></head>
-                <body>${tableHTML}</body>
-                </html>
-            `;
-            
-            let blob = new Blob(['\ufeff' + wordSource], { type: 'application/msword' });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement('a');
-            a.href = url;
-            a.download = 'Учет_мониторов.doc';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
+        }).mount('#app');
     </script>
 </body>
 </html>
