@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Монитор Эксперт</title>
+    <style>
+        /* Telegram Dark Theme Colors */
+        :root {
+            --bg-color: #182533;
+            --secondary-bg: #202b36;
+            --text-color: #f5f5f5;
+            --text-muted: #7f91a4;
+            --button-bg: #2f6ea5;
+            --button-hover: #3b82c4;
+            --danger-color: #e53935;
+            --success-color: #4caf50;
+            --border-color: #2b394a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .screen {
+            display: none;
+            background-color: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            width: 100%;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Кнопки */
+        .btn {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: none;
+            padding: 14px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 500;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:active {
+            background-color: var(--button-hover);
+        }
+
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:active { background-color: #d32f2f; }
+        .btn-secondary { background-color: #505c6b; }
+        .btn-secondary:active { background-color: #647385; }
+
+        /* Главное меню */
+        .main-menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        /* Камера */
+        .camera-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        video, canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Превью картинок */
+        .previews-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .photo-block {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .photo-block span {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .photo-preview {
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #000;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Формы */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        input:focus, textarea:focus {
+            outline: 1px solid var(--button-bg);
+        }
+
+        /* Таблица базы данных */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-color);
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #24313f;
+            color: var(--text-muted);
+        }
+
+        .db-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
+    <div id="screen-main" class="screen active">
+        <h1>Монитор Эксперт</h1>
+        <div class="main-menu-buttons">
+            <button class="btn" onclick="startBarcodeCapture()">➕ Добавить монитор</button>
+            <button class="btn btn-secondary" onclick="openDatabase()">📁 База данных</button>
+        </div>
+    </div>
+    <!-- ЭКРАН 2: ФОТОГРАФИЯ ШТРИХКОДА (СЕРИЙНОГО НОМЕРА) -->
+    <div id="screen-barcode" class="screen">
+        <h2>Фото штрихкода (С/Н)</h2>
+        <p style="color: var(--text-muted); text-align:center; margin-bottom:15px; font-size:14px;">
+            Сфотографируйте штрихкод с серийным номером крупно и четко
+        </p>
+        <div class="camera-box">
+            <video id="barcode-video" autoplay playsinline></video>
+        </div>
+        <button class="btn" onclick="captureBarcodePhoto()">📸 Сделать снимок штрихкода</button>
+        <button class="btn btn-secondary" onclick="goToMain()" style="margin-top: 10px;">Отмена</button>
+    </div>
+
+    <!-- ЭКРАН 3: ФОТОГРАФИЯ МОДЕЛИ И ПРОИЗВОДИТЕЛЯ -->
+    <div id="screen-camera" class="screen">
+        <h2>Фото модели и бренда</h2>
+        <p style="color: var(--text-muted); text-align:center; margin-bottom:15px; font-size:14px;">
+            Сделайте снимок наклейки (шильдика) с моделью монитора
+        </p>
+        <div class="camera-box">
+            <video id="camera-video" autoplay playsinline></video>
+        </div>
+        <button class="btn" onclick="captureModelPhoto()">📸 Сделать снимок модели</button>
+        <button class="btn btn-secondary" onclick="restartFromError('screen-barcode')" style="margin-top: 10px;">↩️ Переснять штрихкод (Ошибка)</button>
+    </div>
+
+    <!-- ЭКРАН 4: КАРТОЧКА ПАРАМЕТРОВ МОНИТОРА -->
+    <div id="screen-card" class="screen">
+        <h2>Параметры монитора</h2>
+        
+        <!-- Контейнер для превью двух сделанных снимков -->
+        <div class="previews-container">
+            <div class="photo-block">
+                <span>Фото штрихкода</span>
+                <img id="preview-barcode-img" class="photo-preview" alt="Штрихкод">
+            </div>
+            <div class="photo-block">
+                <span>Фото модели</span>
+                <img id="preview-model-img" class="photo-preview" alt="Модель">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Производитель</label>
+            <input type="text" id="monitor-brand" placeholder="Например: Samsung, LG, AOC">
+        </div>
+        <div class="form-group">
+            <label>Модель монитора</label>
+            <input type="text" id="monitor-model" placeholder="Например: Odyssey G5, 24G2W1G4">
+        </div>
+        <div class="form-group">
+            <label>Текстовое примечание (необязательно)</label>
+            <textarea id="monitor-desc" rows="2" placeholder="Дополнительная информация..."></textarea>
+        </div>
+        
+        <button class="btn" onclick="saveMonitorData()">💾 Сохранить карточку</button>
+        <button class="btn btn-secondary" onclick="restartFromError('screen-camera')" style="margin-top: 10px;">↩️ Переснять модель (Ошибка)</button>
+        <button class="btn btn-danger" onclick="goToMain()" style="margin-top: 10px;">Удалить черновик и выйти</button>
+    </div>
+
+    <!-- ЭКРАН 5: БАЗА ДАННЫХ -->
+    <div id="screen-database" class="screen" style="max-width: 100%;">
+        <h2>База данных мониторов</h2>
+        
+        <div class="db-actions">
+            <button class="btn btn-secondary btn-sm" onclick="copyTableToClipboard()">📋 Копировать таблицу для Word</button>
+            <button class="btn btn-danger btn-sm" onclick="clearDatabase()">🗑️ Очистить всё</button>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">
+            Формат таблицы адаптирован для быстрого переноса в Word (Модель, С/Н, Производитель).
+        </p>
+
+        <div class="table-container">
+            <table id="monitors-table">
+                <thead>
+                    <tr>
+                        <th>Модель</th>
+                        <th>Серийный номер (Фото)</th>
+                        <th>Производитель</th>
+                        <th>Удалить</th>
+                    </tr>
+                </thead>
+                <tbody id="database-tbody">
+                    <!-- Заполняется динамически -->
+                </tbody>
+            </table>
+        </div>
+
+        <button class="btn btn-secondary" onclick="goToMain()" style="margin-top: 20px;">⬅️ Назад в главное меню</button>
+    </div>
+
+</div> <!-- Конец контейнера -->
+
+<!-- Скрытый холст для обработки фотографий -->
+<canvas id="hidden-canvas" style="display:none;"></canvas>
+<script>
+    // Глобальный объект для хранения потока камеры и текущего черновика
+    let currentStream = null;
+    let tempMonitorData = {
+        barcodePhoto: '', // Вместо текста теперь храним снимок штрихкода
+        modelPhoto: '',
+        brand: '',
+        model: ''
+    };
+
+    // Переключение экранов с автоматическим отключением камеры
+    function showScreen(screenId) {
+        if (screenId !== 'screen-barcode' && screenId !== 'screen-camera') {
+            stopCamera();
+        }
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
+        });
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    function goToMain() {
+        showScreen('screen-main');
+    }
+
+    // Перезапуск действия при ошибке
+    function restartFromError(targetScreenId) {
+        if (confirm("Переснять этот шаг заново? Текущий снимок будет удален.")) {
+            if (targetScreenId === 'screen-barcode') {
+                startBarcodeCapture();
+            } else if (targetScreenId === 'screen-camera') {
+                showScreen('screen-camera');
+                startCamera('camera-video');
+            }
+        }
+    }
+
+    // ВКЛЮЧЕНИЕ КАМЕРЫ НА СМАРТФОНЕ
+    async function startCamera(videoElementId) {
+        stopCamera();
+        const constraints = {
+            video: {
+                facingMode: { ideal: "environment" }, // Всегда запрашиваем основную камеру
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        };
+
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            const videoElement = document.getElementById(videoElementId);
+            videoElement.srcObject = currentStream;
+        } catch (err) {
+            console.error("Ошибка камеры: ", err);
+            alert("Не удалось активировать камеру. Проверьте разрешения в браузере.");
+        }
+    }
+
+    function stopCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+    }
+
+    // ШАГ 1: Запуск съемки штрихкода
+    function startBarcodeCapture() {
+        tempMonitorData = { barcodePhoto: '', modelPhoto: '', brand: '', model: '' };
+        document.getElementById('monitor-brand').value = '';
+        document.getElementById('monitor-model').value = '';
+        document.getElementById('monitor-desc').value = '';
+        
+        showScreen('screen-barcode');
+        startCamera('barcode-video');
+    }
+
+    // ШАГ 2: Фиксация фото штрихкода
+    function captureBarcodePhoto() {
+        const video = document.getElementById('barcode-video');
+        const canvas = document.getElementById('hidden-canvas');
+        const context = canvas.getContext('2d');
+
+        if (currentStream) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Сохраняем фото в черновик
+            tempMonitorData.barcodePhoto = canvas.toDataURL('image/jpeg', 0.6);
+            document.getElementById('preview-barcode-img').src = tempMonitorData.barcodePhoto;
+
+            // Сразу переходим к съемке модели монитора
+            showScreen('screen-camera');
+            startCamera('camera-video');
+        } else {
+            alert("Ошибка: Камера не готова. Попробуйте еще раз.");
+        }
+    }
+
+    // ШАГ 3: Фиксация фото модели монитора
+    function captureModelPhoto() {
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('hidden-canvas');
+        const context = canvas.getContext('2d');
+
+        if (currentStream) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            tempMonitorData.modelPhoto = canvas.toDataURL('image/jpeg', 0.6);
+            document.getElementById('preview-model-img').src = tempMonitorData.modelPhoto;
+
+            // Переходим в карточку параметров
+            showScreen('screen-card');
+        } else {
+            alert("Ошибка: Камера не готова. Попробуйте еще раз.");
+        }
+    }
+
+    // ШАГ 4: Сохранение данных в localStorage
+    function saveMonitorData() {
+        const brand = document.getElementById('monitor-brand').value.trim();
+        const model = document.getElementById('monitor-model').value.trim();
+        const desc = document.getElementById('monitor-desc').value.trim();
+
+        if (!brand || !model) {
+            alert("Заполните обязательные поля: Производитель и Модель!");
+            return;
+        }
+
+        tempMonitorData.brand = brand;
+        tempMonitorData.model = model;
+        tempMonitorData.desc = desc;
+
+        let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+        db.unshift(tempMonitorData); // Новые записи добавляются вверх
+        localStorage.setItem('monitors_db', JSON.stringify(db));
+
+        alert("Запись добавлена в базу данных!");
+        goToMain();
+    }
+
+    // ОТКРЫТИЕ И ОТРИСОВКА БАЗЫ ДАННЫХ
+    function openDatabase() {
+        showScreen('screen-database');
+        renderTable();
+    }
+
+    function renderTable() {
+        const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+        const tbody = document.getElementById('database-tbody');
+        tbody.innerHTML = '';
+
+        if (db.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">База данных пуста</td></tr>`;
+            return;
+        }
+
+        db.forEach((monitor, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${escapeHtml(monitor.model)}</strong></td>
+                <td><span style="color:var(--text-muted); font-size:12px;">📸 Сохранено как фото</span></td>
+                <td>${escapeHtml(monitor.brand)}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteMonitor(${index})">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Удаление отдельной записи
+    function deleteMonitor(index) {
+        if (confirm("Удалить этот монитор из базы данных?")) {
+            let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+            db.splice(index, 1);
+            localStorage.setItem('monitors_db', JSON.stringify(db));
+            renderTable();
+        }
+    }
+
+    // Полная очистка
+    function clearDatabase() {
+        if (confirm("Вы уверены, что хотите полностью стереть БАЗУ ДАННЫХ?")) {
+            localStorage.removeItem('monitors_db');
+            renderTable();
+        }
+    }
+
+    // КОПИРОВАНИЕ В ФОРМАТЕ ТАБЛИЦЫ ДЛЯ WORD (Модель, С/Н, Производитель)
+    function copyTableToClipboard() {
+        const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+        if (db.length === 0) {
+            alert("База данных пуста.");
+            return;
+        }
+
+        // Задаем заголовки колонок согласно вашему требованию
+        let textForWord = "Модель\tСерийный номер\tПроизводитель\n";
+        
+        db.forEach(m => {
+            // Так как серийный номер сохранен в виде фото, в текстовую таблицу Word 
+            // передается текстовая метка "[См. фото в приложении]". Текст разделен знаком Табуляции (\t).
+            textForWord += `${m.model}\t[Фото штрихкода в приложении]\t${m.brand}\n`;
+        });
+
+        navigator.clipboard.writeText(textForWord).then(() => {
+            alert("Таблица скопирована! Откройте Word и просто нажмите 'Вставить' (Ctrl+V). Колонки распределятся автоматически.");
+        }).catch(err => {
+            console.error(err);
+            alert("Не удалось скопировать автоматически. Разрешите сайту доступ к буферу обмена.");
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+</body>
+</html>
