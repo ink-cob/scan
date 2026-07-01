@@ -270,23 +270,28 @@
 <!-- Скрытый холст для захвата кадров и передачи их в ИИ -->
 <canvas id="hidden-canvas" style="display:none;"></canvas>
 
-<script>
-    // Проверяем, поддерживает ли телефон встроенный сканер кодов на уровне системы
-    const hasBuiltInScanner = ('BarcodeDetector' in window);
-    
-    let currentStream = null;
-    let scanInterval = null;
 
-    // Объявляем переменную в самом верху, чтобы к ней всегда был доступ
+    function clearDatabase() {
+        if (confirm("Очистить всю базу?")) {
+            localStorage.removeItem('monitors_db');
+            renderTable();
+        }
+    }
+
+<script>
+    let currentStream = null;
+
+    // Храним данные черновика: картинку штрихкода, картинку модели и текст
     let tempMonitorData = {
-        serial: '',
+        barcodePhoto: '', // Сюда запишется фото штрихкода серийного номера
+        modelPhoto: '',   // Сюда запишется фото наклейки параметров
         brand: '',
         model: ''
     };
 
     // Функция переключения экранов
     function showScreen(screenId) {
-        stopAllCameras();
+        stopCamera();
         document.querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
         });
@@ -297,99 +302,80 @@
         showScreen('screen-main');
     }
 
+    // Перезапуск шага при ошибке (сбрасывает камеру и старый снимок)
     function restartStep(step) {
-        if (step === 'barcode') {
-            startBarcodeScan();
-        } else if (step === 'camera') {
-            startModelCamera();
+        if (confirm("Переснять этот шаг заново?")) {
+            if (step === 'barcode') {
+                startBarcodeScan();
+            } else if (step === 'camera') {
+                startModelCamera();
+            }
         }
     }
 
-    // Полная остановка всех процессов и камер
-    function stopAllCameras() {
-        if (scanInterval) {
-            clearInterval(scanInterval);
-            scanInterval = null;
+    // Включение камеры смартфона
+    async function startCamera(videoId) {
+        stopCamera();
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" }, width: 1280, height: 720 },
+                audio: false
+            });
+            document.getElementById(videoId).srcObject = currentStream;
+        } catch (err) {
+            console.error("Ошибка камеры: ", err);
+            alert("Не удалось запустить камеру телефона. Проверьте разрешения.");
         }
+    }
+
+    // Выключение камеры
+    function stopCamera() {
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
             currentStream = null;
         }
     }
 
-    // --- ШАГ 1: СКАНЕР ШТРИХКОДА (Встроенный или ручной) ---
-    async function startBarcodeScan() {
-        // Гарантированно инициализируем объект данных
-        tempMonitorData = { serial: '', brand: '', model: '' };
-        document.getElementById('manual-serial').value = '';
-        
+    // ШАГ 1: Запуск экрана для фото штрихкода
+    function startBarcodeScan() {
+        tempMonitorData = { barcodePhoto: '', modelPhoto: '', brand: '', model: '' };
         showScreen('screen-barcode');
-
-        try {
-            // Запускаем поток камеры смартфона
-            currentStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: "environment" }, width: 1280, height: 720 },
-                audio: false
-            });
-            
-            const videoElement = document.getElementById('barcode-video');
-            videoElement.srcObject = currentStream;
-
-            // Если браузер поддерживает встроенный ИИ-сканер кодов
-            if (hasBuiltInScanner) {
-                const barcodeDetector = new BarcodeDetector({ formats: ['code_128', 'ean_13', 'code_39'] });
-                
-                // Проверяем кадры каждые 300 миллисекунд
-                scanInterval = setInterval(async () => {
-                    if (videoElement.readyState === videoElement.HAVE_CURRENT_DATA) {
-                        try {
-                            const barcodes = await barcodeDetector.detect(videoElement);
-                            if (barcodes.length > 0) {
-                                tempMonitorData.serial = barcodes.rawValue;
-                                stopAllCameras();
-                                if (navigator.vibrate) navigator.vibrate(100);
-                                startModelCamera();
-                            }
-                        } catch (e) {
-                            console.log("Поиск кода в кадре...");
-                        }
-                    }
-                }, 300);
-            }
-        } catch (err) {
-            console.error("Ошибка запуска камеры: ", err);
-            alert("Не удалось активировать камеру. Введите серийный номер вручную.");
-        }
+        startCamera('barcode-video');
     }
 
+    // Фиксация фотографии штрихкода (никакого автосканирования, просто снимок по кнопке)
     function acceptBarcodeManually() {
-        const val = document.getElementById('manual-serial').value.trim();
-        if (!val) {
-            alert("Пожалуйста, дождитесь автосканирования штрихкода или введите его вручную.");
+        const video = document.getElementById('barcode-video');
+        const canvas = document.getElementById('hidden-canvas');
+        const context = canvas.getContext('2d');
+
+        if (!video.srcObject) {
+            alert("Камера не готова.");
             return;
         }
-        tempMonitorData.serial = val;
+
+        // Захватываем кадр с видео
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Сохраняем снимок штрихкода в черновик как Base64 строку
+        tempMonitorData.barcodePhoto = canvas.toDataURL('image/jpeg', 0.6);
+
+        // Сразу переходим к следующему шагу — съемке модели
         startModelCamera();
     }
 
-    // --- ШАГ 2: СЪЕМКА НАКЛЕЙКИ МОДЕЛИ ---
-    async function startModelCamera() {
+    // ШАГ 2: Запуск экрана для фото модели
+    function startModelCamera() {
         showScreen('screen-camera');
         document.getElementById('ocr-loader').style.display = 'none';
         document.getElementById('camera-wrapper').style.display = 'block';
         document.getElementById('capture-ocr-btn').style.display = 'flex';
         
-        try {
-            currentStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: "environment" } },
-                audio: false
-            });
-            document.getElementById('camera-video').srcObject = currentStream;
-        } catch (e) {
-            alert("Не удалось запустить камеру для фото.");
-        }
+        startCamera('camera-video');
     }
-    // Захват кадра и отправка в Tesseract
+    // Захват кадра модели и запуск анализа нейросетью Tesseract.js
     async function captureAndRecognizeText() {
         const video = document.getElementById('camera-video');
         const canvas = document.getElementById('hidden-canvas');
@@ -402,28 +388,31 @@
             return;
         }
 
+        // Делаем снимок наклейки монитора
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageBlob = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Сохраняем фото модели в черновик
+        tempMonitorData.modelPhoto = canvas.toDataURL('image/jpeg', 0.6);
 
-        stopAllCameras();
+        // Отключаем камеру и включаем экран загрузки ИИ
+        stopCamera();
         document.getElementById('camera-wrapper').style.display = 'none';
         document.getElementById('capture-ocr-btn').style.display = 'none';
         loader.style.display = 'block';
         loaderText.innerText = "Нейросеть считывает текст... (3-5 сек)";
 
-        // Проверяем, загружена ли библиотека Tesseract
+        // Проверяем, загружен ли ИИ-модуль
         if (typeof Tesseract === 'undefined') {
-            alert("ИИ-модуль текста временно недоступен без интернета. Введите параметры вручную.");
-            tempMonitorData.brand = "";
-            tempMonitorData.model = "";
+            alert("ИИ-модуль текста недоступен. Введите параметры вручную.");
             openCardEditor();
             return;
         }
 
         try {
-            const result = await Tesseract.recognize(imageBlob, 'eng+rus', {
+            // Анализируем фото модели через встроенную нейросеть
+            const result = await Tesseract.recognize(tempMonitorData.modelPhoto, 'eng+rus', {
                 logger: m => {
                     if (m.status === 'recognizing') {
                         loaderText.innerText = `Анализ текста: ${Math.floor(m.progress * 100)}%`;
@@ -431,23 +420,28 @@
                 }
             });
 
+            // Извлекаем из текста модель и бренд
             parseMonitorText(result.data.text);
             openCardEditor();
 
         } catch (ocrError) {
             console.error("Ошибка OCR: ", ocrError);
-            alert("Не удалось считать текст автоматически.");
+            alert("Не удалось считать текст автоматически. Заполните карточку вручную.");
             openCardEditor();
         }
     }
 
+    // Переход в карточку параметров монитора
     function openCardEditor() {
         document.getElementById('monitor-brand').value = tempMonitorData.brand || "";
         document.getElementById('monitor-model').value = tempMonitorData.model || "";
-        document.getElementById('monitor-serial').value = tempMonitorData.serial || "";
+        
+        // Выводим вместо текста заглушку, так как серийник — это картинка штрихкода
+        document.getElementById('monitor-serial').value = "[Штрихкод сохранен как фото]";
         showScreen('screen-card');
     }
 
+    // Алгоритм разбора текста шильдика (ищет бренд и модель)
     function parseMonitorText(text) {
         if (!text) return;
         const upperText = text.toUpperCase();
@@ -482,18 +476,21 @@
     function saveMonitorData() {
         const brand = document.getElementById('monitor-brand').value.trim();
         const model = document.getElementById('monitor-model').value.trim();
-        const serial = document.getElementById('monitor-serial').value.trim();
 
-        if (!brand || !model || !serial) {
-            alert("Заполните поля производителя, модели и серийного номера!");
+        if (!brand || !model) {
+            alert("Заполните поля производителя и модели перед сохранением!");
             return;
         }
 
+        // Записываем финальные текстовые значения
+        tempMonitorData.brand = brand;
+        tempMonitorData.model = model;
+
         let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
-        db.unshift({ brand, model, serial });
+        db.unshift({...tempMonitorData}); // Клонируем объект и добавляем в начало базы
         localStorage.setItem('monitors_db', JSON.stringify(db));
 
-        alert("Успешно сохранено!");
+        alert("Карточка успешно сохранена!");
         goToMain();
     }
 
@@ -516,7 +513,11 @@
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><strong>${escapeHtml(monitor.model)}</strong></td>
-                <td><code style="background:#1c2a38; padding:3px 6px; border-radius:4px;">${escapeHtml(monitor.serial)}</code></td>
+                <td>
+                    <span style="color:var(--success-color); font-size:12px; cursor:pointer;" onclick="viewBarcodePhoto(${index})">
+                        📸 Посмотреть фото С/Н
+                    </span>
+                </td>
                 <td>${escapeHtml(monitor.brand)}</td>
                 <td><button class="btn btn-danger btn-sm" onclick="deleteMonitor(${index})">🗑️</button></td>
             `;
@@ -524,8 +525,20 @@
         });
     }
 
+    // Вспомогательная функция, чтобы при клике в таблице увидеть фото штрихкода серийника
+    window.viewBarcodePhoto = function(index) {
+        const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
+        const monitor = db[index];
+        if (monitor && monitor.barcodePhoto) {
+            const newWindow = window.open();
+            newWindow.document.write(`<img src="${monitor.barcodePhoto}" style="max-width:100%; border-radius:8px;" alt="Штрихкод">`);
+        } else {
+            alert("Фото штрихкода не найдено.");
+        }
+    };
+
     function deleteMonitor(index) {
-        if (confirm("Удалить карточку?")) {
+        if (confirm("Удалить карточку монитора?")) {
             let db = JSON.parse(localStorage.getItem('monitors_db')) || [];
             db.splice(index, 1);
             localStorage.setItem('monitors_db', JSON.stringify(db));
@@ -534,22 +547,28 @@
     }
 
     function clearDatabase() {
-        if (confirm("Очистить всю базу?")) {
+        if (confirm("Вы уверены, что хотите полностью очистить всю базу данных?")) {
             localStorage.removeItem('monitors_db');
             renderTable();
         }
     }
 
+    // Сборка структурированного текста для копирования в Microsoft Word
     function copyTableToClipboard() {
         const db = JSON.parse(localStorage.getItem('monitors_db')) || [];
-        if (db.length === 0) { alert("База пуста"); return; }
+        if (db.length === 0) { alert("База данных пуста."); return; }
 
+        // Колонки по ТЗ: Модель -> Серийный номер -> Производитель
         let textForWord = "Модель\tСерийный номер\tПроизводитель\n";
-        db.forEach(m => { textForWord += `${m.model}\t${m.serial}\t${m.brand}\n`; });
+        db.forEach(m => { 
+            textForWord += `${m.model}\t[См. фото штрихкода в приложении]\t${m.brand}\n`; 
+        });
 
         navigator.clipboard.writeText(textForWord).then(() => {
-            alert("Скопировано! Вставьте в Word (Ctrl+V).");
-        }).catch(() => { alert("Ошибка буфера обмена."); });
+            alert("Таблица скопирована! Откройте Word и нажмите 'Вставить' (Ctrl+V). Данные автоматически распределятся по столбикам.");
+        }).catch(() => { 
+            alert("Ошибка буфера обмена. Не удалось скопировать данные."); 
+        });
     }
 
     function escapeHtml(text) {
@@ -559,4 +578,5 @@
 </script>
 </body>
 </html>
+
 
