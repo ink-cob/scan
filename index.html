@@ -9,34 +9,40 @@
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #121214; color: #e1e1e6; margin: 0; padding: 1vw; width: 100%; min-height: 100vh; }
         
-        /* Верхняя панель: растягивается по ширине и меняет форму */
+        /* Верхняя панель управления */
         .top-bar { display: flex; flex-direction: column; gap: 15px; background: #1e1e24; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 15px; position: sticky; top: 10px; z-index: 100; width: 100%; }
-        
-        /* Кнопки и блоки управления: заполняют все свободное место */
         .top-controls { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; }
+        
         .title-group { flex: 1; min-width: 250px; text-align: left; }
         .title-group h1 { margin: 0; font-size: calc(18px + 0.5vw); color: #fff; }
         .title-group p { margin: 3px 0 0 0; font-size: calc(11px + 0.1vw); color: #a8a8b3; }
         
         .control-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex: 2; justify-content: flex-end; min-width: 280px; }
         
-        /* Резиновые интерактивные элементы */
-        button { background: #04d361; color: #fff; border: none; padding: 12px 20px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; flex: 1; min-width: 140px; text-align: center; }
+        /* Кнопки и фильтры */
+        button { background: #04d361; color: #fff; border: none; padding: 12px 20px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; flex: 1; min-width: 130px; text-align: center; }
         button:hover { background: #06b955; }
         button:disabled { background: #494950; cursor: not-allowed; }
-        .reset-btn { background: #e04545; }
+        .reset-btn { background: #e04545; min-width: 90px; flex: 0.5; }
         .reset-btn:hover { background: #c73232; }
+        
+        /* Панель фильтрации стихий */
+        .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; border-top: 1px solid #29292e; padding-top: 12px; justify-content: center; }
+        .filter-btn { background: #29292e; color: #a8a8b3; border: 1px solid #323238; padding: 8px 16px; font-size: 13px; min-width: 90px; flex: none; }
+        .filter-btn:hover { background: #323238; color: #fff; }
+        .filter-btn.active { background: #04d361; color: #fff; border-color: #04d361; }
         
         .counter-badge { background: #29292e; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 14px; border: 1px solid #323238; text-align: center; min-width: 150px; }
         .status-box { font-style: italic; color: #a8a8b3; padding: 12px; border-radius: 6px; background: #141416; flex: 2; min-width: 200px; font-size: 13px; text-align: center; }
         
-        #camera-view { width: 100%; max-width: 200px; height: 120px; display: none; background: #000; border-radius: 6px; transform: scaleX(-1); object-fit: cover; border: 2px solid #04d361; }
+        /* ЗЕРКАЛЬНЫЙ СКАНЕР КАМЕРЫ (transform: scaleX(-1) отражает видео горизонтально) */
+        #camera-view { width: 100%; max-width: 160px; height: 110px; display: none; background: #000; border-radius: 6px; transform: scaleX(-1); object-fit: cover; border: 2px solid #04d361; }
         
-        /* Ультра-резиновая сетка: идеально заполняет экран от края до края */
-        .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(100px + 3vw), 1fr)); gap: 8px; width: 100%; padding-bottom: 20px; }
+        /* Резиновая сетка */
+        .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(110px + 3vw), 1fr)); gap: 8px; width: 100%; padding-bottom: 20px; }
         
-        /* Карточки: сжимаются и растягиваются плавно */
-        .card { background: #1e1e24; border: 1px solid #29292e; border-radius: 6px; padding: 8px; position: relative; opacity: 0.25; transition: 0.2s; font-size: 11px; display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        /* Компактные карточки */
+        .card { background: #1e1e24; border: 1px solid #29292e; border-radius: 6px; padding: 8px; position: relative; opacity: 0.25; transition: 0.2s; font-size: 11px; display: flex; flex-direction: column; gap: 2px; width: 100%; align-items: center; text-align: center; }
         .card.owned { opacity: 1; background: #202024; border-width: 2px; }
         
         .rarity-Обычный { border-color: #494950; }
@@ -55,54 +61,72 @@
             100% { box-shadow: 0 0 5px #ffb703; }
         }
         
-        .badge { font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 3px; align-self: flex-start; text-transform: uppercase; }
+        /* УНИКАЛЬНЫЙ ЦИФРОВОЙ АВАТАР ДЛЯ КАЖДОГО СУЩЕСТВА */
+        .avatar-box { width: 50px; height: 50px; border-radius: 8px; margin-bottom: 4px; display: flex; flex-wrap: wrap; overflow: hidden; padding: 2px; background: #141416; border: 1px solid #29292e; }
+        .pixel { width: 33.33%; height: 33.33%; transition: 0.3s; }
+        
+        .badge { font-size: 8px; font-weight: bold; padding: 1px 4px; border-radius: 3px; text-transform: uppercase; margin-bottom: 2px; }
         .badge-Обычный { background: #494950; color: #fff; }
         .badge-Редкий { background: #2a6f97; color: #fff; }
         .badge-Эпический { background: #7209b7; color: #fff; }
         .badge-БОЖЕСТВЕННЫЙ { background: #ffb703; color: #000; }
         
-        .card-name { font-weight: bold; font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-        .card-elem { color: #a8a8b3; }
-        .card-ability { color: #04d361; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .chance-lbl { color: #7c7c8a; font-size: 10px; margin-top: 4px; border-top: 1px solid #29292e; padding-top: 3px; }
-        .status-tag { font-weight: bold; margin-top: 2px; text-align: right; font-size: 9px; }
+        .card-name { font-weight: bold; font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+        .card-elem { color: #a8a8b3; font-size: 10px; }
+        .card-ability { color: #04d361; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 10px; }
+        .chance-lbl { color: #7c7c8a; font-size: 9px; margin-top: 4px; border-top: 1px solid #29292e; padding-top: 3px; width: 100%; }
+        .status-tag { font-weight: bold; margin-top: 2px; font-size: 9px; width: 100%; }
         
-        /* Мобильная резиновая адаптация для совсем узких экранов */
+        /* Адаптивность для узких экранов телефонов */
         @media (max-width: 600px) {
-            body { padding: 8px; }
-            .top-bar { padding: 12px; }
+            body { padding: 6px; }
+            .top-bar { padding: 12px; gap: 10px; }
             .title-group { text-align: center; }
             .control-buttons { flex-direction: column; width: 100%; align-items: stretch; }
             button { width: 100%; }
-            #camera-view { max-width: 100%; height: 140px; }
+            #camera-view { max-width: 100%; height: 130px; }
+            .pokedex-grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 5px; }
         }
     </style>
 </head>
 <body>
-<!-- ВЕРХНЯЯ ПАНЕЛЬ С УПРАВЛЕНИЕМ -->
-<div class="top-bar">
-    <div class="top-controls">
-        <div class="title-group">
-            <h1>🛰️ Ink zoo 1000</h1>
-            <p>Все элементы и кнопки идеально подстраиваются под ширину любого экрана.</p>
+
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ С УПРАВЛЕНИЕМ -->
+    <div class="top-bar">
+        <div class="top-controls">
+            <div class="title-group">
+                <h1>🛰️ Ink zoo 1000</h1>
+                <p>Зеркальный сканер, фильтрация по стихиям и уникальные аватарки существ.</p>
+            </div>
+            <div class="control-buttons">
+                <video id="camera-view" autoplay playsinline></video>
+                <div id="status" class="status-box">Готов к сканированию местности...</div>
+                <div class="counter-badge">🎒 ЗООПАРК: <span id="bag-count">0</span> / 1000</div>
+                <button id="hunt-btn" onclick="triggerCapture()">📷 ИСКАТЬ</button>
+                <button class="reset-btn" onclick="resetCollection()">🗑️ СБРОС</button>
+            </div>
         </div>
-        <div class="control-buttons">
-            <video id="camera-view" autoplay playsinline></video>
-            <div id="status" class="status-box">Сканер готов к поиску аномалий...</div>
-            <div class="counter-badge">🎒 РЮКЗАК: <span id="bag-count">0</span>/1000</div>
-            <button id="hunt-btn" onclick="triggerCapture()">📷 СКАНЯТЬ</button>
-            <button class="reset-btn" onclick="resetCollection()">🗑️ СБРОС</button>
+        
+        <!-- КНОПКИ ФИЛЬТРАЦИИ СТИХИЙ -->
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterElement('all', this)">Все</button>
+            <button class="filter-btn" onclick="filterElement('Огонь 🔥', this)">Огонь 🔥</button>
+            <button class="filter-btn" onclick="filterElement('Вода 💧', this)">Вода 💧</button>
+            <button class="filter-btn" onclick="filterElement('Земля ⛰️', this)">Земля ⛰️</button>
+            <button class="filter-btn" onclick="filterElement('Воздух 💨', this)">Воздух 💨</button>
         </div>
     </div>
-</div>
+
     <!-- РЕЗИНОВАЯ СЕТКА СУЩЕСТВ -->
     <div id="pokedex-grid" class="pokedex-grid"></div>
     <script>
-        // База слогов для генерации 1000 уникальных имен
+        // База слогов для генерации уникальных имен существ в зоопарке
         const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
         const prefixes = ["Пиро", "Аква", "Гео", "Аэро", "Вулкан", "Гидро", "Терра", "Зефир", "Сильф", "Некро", "Торнадо", "Цунами", "Магма", "Небула", "Тор", "Флейм", "Шторм", "Глейшер", "Титано", "Спарк", "Крио", "Электро", "Пси", "Омега", "Альфа", "Вектор"];
         const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль", "трон", "морф", "корн", "цеце"];
         const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация", "Гравитация", "Ментальный шторм", "Сверхновая", "Лавовый плевок", "Песчаная буря", "Звуковой удар", "Ледяной луч"];
+
+        let currentFilter = 'all';
 
         // Генератор псевдослучайных чисел с фиксированным сидом
         function seededRandom(seed) {
@@ -110,7 +134,28 @@
             return x - Math.floor(x);
         }
 
-        // Создаем базу на 1000 существ
+        // Функция генерации уникальной пиксельной аватарки для карточки существа
+        function generateAvatarHTML(id, rarity) {
+            let colors = [];
+            // Выбираем палитру цветов в зависимости от редкости существа
+            if (rarity === "БОЖЕСТВЕННЫЙ") colors = ["#ffb703", "#fb8500", "#219ebc"];
+            else if (rarity === "Эпический") colors = ["#9b5de5", "#f15bb5", "#00f5d4"];
+            else if (rarity === "Редкий") colors = ["#00bbf9", "#00f5d4", "#3a86c8"];
+            else colors = ["#7c7c8a", "#4a4e69", "#9a8c98"];
+
+            let html = '<div class="avatar-box">';
+            // Генерируем 9 пикселей (сетка 3x3) для уникального паттерна внешности
+            for (let i = 1; i <= 9; i++) {
+                let rand = seededRandom(id * i * 7);
+                // 50% шанс, что пиксель будет цветным, иначе темный фон
+                let color = rand > 0.5 ? colors[Math.floor(rand * colors.length)] : "#141416";
+                html += `<div class="pixel" style="background: ${color}"></div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // Создаем базу на 1000 существ для Ink zoo
         function generatePokedex() {
             let list = [];
             for (let i = 1; i <= 1000; i++) {
@@ -123,7 +168,6 @@
                 let ability = abilities[Math.floor(r1 * abilities.length)];
                 
                 let rarity, chance;
-                // Распределение: 500 Обычных (60%), 350 Редких (30%), 120 Эпических (8%), 30 Божественных (2%)
                 if (i <= 500) { rarity = "Обычный"; chance = (60.0 / 500); }
                 else if (i <= 850) { rarity = "Редкий"; chance = (30.0 / 350); }
                 else if (i <= 970) { rarity = "Эпический"; chance = (8.0 / 120); }
@@ -135,9 +179,9 @@
         }
 
         const allCreatures = generatePokedex();
-        let myCollection = JSON.parse(localStorage.getItem('ink_pokedex_bag_1000')) || [];
+        let myCollection = JSON.parse(localStorage.getItem('ink_zoo_bag_1000')) || [];
 
-        // Отрисовка резиновой сетки
+        // Отрисовка резиновой сетки с учетом выбранного фильтра
         function renderUI() {
             const grid = document.getElementById('pokedex-grid');
             grid.innerHTML = '';
@@ -145,16 +189,22 @@
             const ownedIds = new Set(myCollection.map(c => c.id));
             
             allCreatures.forEach(p => {
+                // Если включен фильтр по стихии, пропускаем неподходящие карточки
+                if (currentFilter !== 'all' && p.element !== currentFilter) return;
+
                 const isOwned = ownedIds.has(p.id);
+                const avatarHTML = generateAvatarHTML(p.id, p.rarity);
+
                 grid.innerHTML += `
                     <div class="card rarity-${p.rarity} ${isOwned ? 'owned' : ''}">
                         <span class="badge badge-${p.rarity}">${p.rarity}</span>
+                        ${avatarHTML}
                         <div class="card-name" title="${p.name}">${p.name}</div>
                         <div class="card-elem">${p.element}</div>
                         <div class="card-ability" title="${p.ability}">${p.ability}</div>
                         <div class="chance-lbl">🎯 ${p.chance_pct}%</div>
                         <div class="status-tag" style="color:${isOwned ? '#04d361':'#494950'}">
-                            ${isOwned ? '✅ ЕСТЬ' : '🔒 НЕТ'}
+                            ${isOwned ? '✅ В ЗОО' : '🔒 ДИКИЙ'}
                         </div>
                     </div>`;
             });
@@ -162,7 +212,18 @@
             document.getElementById('bag-count').innerText = myCollection.length;
         }
 
-        // Запуск сканирования через камеру
+        // Функция фильтрации стихий при нажатии кнопок
+        function filterElement(elementName, btnElement) {
+            currentFilter = elementName;
+            
+            // Сбрасываем старый активный класс у кнопок и вешаем на новую
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            
+            renderUI();
+        }
+
+        // Запуск зеркального сканирования и поимки
         async function triggerCapture() {
             const video = document.getElementById('camera-view');
             const status = document.getElementById('status');
@@ -171,6 +232,7 @@
             btn.disabled = true;
             status.innerText = "📡 Сканирование пространства...";
             
+            // Включаем настоящую зеркальную видеокамеру прямо внутри страницы
             try {
                 if (!video.srcObject) {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -178,7 +240,7 @@
                     video.style.display = "block";
                 }
             } catch (err) {
-                console.log("Камера недоступна");
+                console.log("Камера недоступна или заблокирована");
             }
 
             setTimeout(() => {
@@ -195,7 +257,7 @@
 
                 if (!myCollection.some(item => item.id === caught.id)) {
                     myCollection.push(caught);
-                    localStorage.setItem('ink_pokedex_bag_1000', JSON.stringify(myCollection));
+                    localStorage.setItem('ink_zoo_bag_1000', JSON.stringify(myCollection));
                     status.innerHTML = `🎉 Пойман новый: <b style="color:#fff;">${caught.name}</b> (${caught.rarity})!`;
                 } else {
                     status.innerHTML = `📡 Повторка: <b style="color:#fff;">${caught.name}</b>`;
@@ -212,16 +274,17 @@
             }, 1800);
         }
 
-        // Функция полного сброса рюкзака
+        // Функция полного сброса рюкзака зоопарка
         function resetCollection() {
-            if (confirm("Вы уверены, что хотите полностью очистить рюкзак и начать заново?")) {
+            if (confirm("Вы уверены, что хотите выпустить всех существ из зоопарка и начать заново?")) {
                 myCollection = [];
-                localStorage.removeItem('ink_pokedex_bag_1000');
-                document.getElementById('status').innerText = "Прогресс успешно сброшен. Удачной охоты!";
+                localStorage.removeItem('ink_zoo_bag_1000');
+                document.getElementById('status').innerText = "Все существа выпущены на волю. Удачной охоты!";
                 renderUI();
             }
         }
 
+        // Первичный вывод интерфейса при открытии страницы
         renderUI();
     </script>
 </body>
