@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ink zoo 1000 — Фото-Архив</title>
     <style>
-        /* Базовые настройки резинового экрана */
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #121214; color: #e1e1e6; margin: 0; padding: 1vw; width: 100%; min-height: 100vh; overflow-x: hidden; }
         
-        /* Фиксированная верхняя панель управления */
         .top-bar { display: flex; flex-direction: column; gap: 12px; background: #1e1e24; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 15px; position: sticky; top: 10px; z-index: 100; width: 100%; transition: max-height 0.2s ease-in-out; }
         .top-controls { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; }
         
@@ -26,14 +24,13 @@
         .medal { background: #141416; border: 1px solid #29292e; padding: 6px 12px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; gap: 6px; opacity: 0.25; transition: 0.2s; color: #a8a8b3; font-weight: bold; }
         .medal.unlocked { opacity: 1; background: #202024; border-color: #ffb703; color: #ffb703; box-shadow: 0 0 8px rgba(255,183,3,0.2); }
         
-        /* Кнопки с營аппаратным ускорением для исключения залипаний */
+        /* Кнопки с аппаратным ускорением для исключения залипаний */
         button { background: #04d361; color: #fff; border: none; padding: 10px 18px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.1s ease; transform: translateZ(0); }
         button:hover { background: #06b955; }
         button:disabled { background: #494950; cursor: not-allowed; }
         .toggle-btn { background: #323238; color: #fff; min-width: 110px; padding: 8px 14px; font-size: 12px; }
         .reset-btn { background: #e04545; }
         .reset-btn:hover { background: #c73232; }
-        
         /* Фильтры стихий */
         .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; border-top: 1px solid #29292e; padding-top: 10px; justify-content: center; }
         .filter-btn { background: #29292e; color: #a8a8b3; border: 1px solid #323238; padding: 6px 14px; font-size: 12px; min-width: 80px; }
@@ -59,13 +56,13 @@
         .rarity-Редкий { border-color: #2a6f97; }
         .rarity-Эпический { border-color: #7209b7; }
         .rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 8px rgba(255,183,3,0.3); }
-        .card.owned.rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 12px #ffb703; animation: pulse 2s infinite; }
+        .card.owned.rarity-БОЖЕСТВНЫЙ { border-color: #ffb703; box-shadow: 0 0 12px #ffb703; animation: pulse 2s infinite; }
+
         @keyframes pulse {
             0% { box-shadow: 0 0 5px #ffb703; }
             50% { box-shadow: 0 0 15px #ffb703; }
             100% { box-shadow: 0 0 5px #ffb703; }
         }
-        
         /* Компактный пиксельный аватар */
         .avatar-box { width: 42px; height: 42px; border-radius: 6px; margin-bottom: 4px; display: flex; flex-wrap: wrap; overflow: hidden; padding: 1px; background: #141416; border: 1px solid #29292e; }
         .pixel { width: 33.33%; height: 33.33%; }
@@ -90,10 +87,9 @@
         
         .modal-avatar { width: 100px; height: 100px; border-radius: 10px; display: flex; flex-wrap: wrap; overflow: hidden; padding: 4px; background: #141416; border: 2px solid #29292e; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .modal-avatar .pixel { width: 33.33%; height: 33.33%; }
-        
         /* Окно вывода фотографии кадра поимки */
-        .modal-photo-container { width: 100%; height: 160px; background: #141416; border-radius: 8px; border: 1px dashed #323238; margin-top: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-        .modal-photo-img { width: 100%; height: 100%; object-fit: contain; display: none; }
+        .modal-photo-container { width: 100%; height: 250px; background: #141416; border-radius: 8px; border: 1px dashed #323238; margin-top: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .modal-photo-img { width: 100%; height: 100%; object-fit: contain; display: none; cursor: zoom-in; }
         .modal-photo-placeholder { font-size: 12px; color: #7c7c8a; font-style: italic; text-align: center; padding: 10px; }
         
         .modal-name { font-size: 20px; font-weight: bold; color: #fff; margin: 0; }
@@ -101,6 +97,9 @@
         .modal-info div { display: flex; justify-content: space-between; border-bottom: 1px dashed #29292e; padding-bottom: 3px; }
         .modal-info div:last-child { border-bottom: none; padding-bottom: 0; }
         .modal-info b { color: #fff; }
+        
+        .fullphoto-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; cursor: zoom-out; backdrop-filter: blur(5px); }
+        .fullphoto-img { max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
         
         @media (max-width: 600px) {
             body { padding: 5px; }
@@ -116,8 +115,7 @@
     </style>
 </head>
 <body>
-
-    <!-- СКЛАДНАЯ ВЕРХНЯЯ ПАНЕЛЬ -->
+    <!-- СКЛАДНАЯ ВЕРХНЯЯ ПАНЕЛЬ С УПРАВЛЕНИЕМ -->
     <div id="topBar" class="top-bar">
         <div class="top-controls">
             <div class="title-group">
@@ -128,7 +126,7 @@
         </div>
         
         <div class="collapsible-content">
-            <!-- БЛОК ДОСТИЖЕНИЙ -->
+            <!-- БЛОК ДОСТИЖЕНИЙ (5 НАГРАД) -->
             <div class="achievements-box">
                 <div id="medal-fire" class="medal">🔥 Повелитель Пламени</div>
                 <div id="medal-water" class="medal">💧 Магистр Глубин</div>
@@ -138,9 +136,8 @@
             </div>
 
             <div class="control-buttons">
-                <!-- Скрытые элементы для анализа цвета и моментального фотокадра -->
                 <canvas id="analysis-canvas" style="display:none;" width="32" height="24"></canvas>
-                <canvas id="snapshot-canvas" style="display:none;" width="400" height="300"></canvas>
+                <canvas id="snapshot-canvas" style="display:none;" width="640" height="480"></canvas>
                 <video id="camera-view" autoplay playsinline></video>
                 <div id="status" class="status-box">Готов к сканированию местности...</div>
                 <div class="counter-badge">🎒 УНИКАЛЬНЫХ: <span id="bag-count">0</span> / 1000</div>
@@ -159,9 +156,8 @@
         </div>
     </div>
 
-    <!-- СЕТКА СУЩЕСТВ -->
+    <!-- РЕЗИНОВАЯ СЕТКА СУЩЕСТВ -->
     <div id="pokedex-grid" class="pokedex-grid"></div>
-
     <!-- ВСПЛЫВАЮЩЕЕ ОКНО ПРОСМОТРА КАРТОЧКИ -->
     <div id="modalOverlay" class="modal-overlay" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
@@ -171,13 +167,182 @@
             <h2 id="modalName" class="modal-name"></h2>
             
             <div class="modal-photo-container">
-                <img id="modalPhotoImg" class="modal-photo-img" src="" alt="Кадр поимки">
+                <img id="modalPhotoImg" class="modal-photo-img" src="" alt="Кадр поимки" onclick="openFullPhoto()">
                 <div id="modalPhotoPlaceholder" class="modal-photo-placeholder"></div>
             </div>
             
             <div id="modalInfoBlock" class="modal-info"></div>
         </div>
     </div>
+
+    <!-- ВСПЛЫВАЮЩЕЕ ОКНО НА ВЕСЬ ЭКРАН ДЛЯ ПРОСМОТРА ФОТО -->
+    <div id="fullPhotoOverlay" class="fullphoto-overlay" onclick="closeFullPhoto()">
+        <img id="fullPhotoImg" class="fullphoto-img" src="" alt="Полный размер">
+    </div>
+
+    <script>
+        const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
+        const prefixes = ["Пиро", "Аква", "Гео", "Аэро", "Вулкан", "Гидро", "Терра", "Зефир", "Сильф", "Некро", "Торнадо", "Цунами", "Магма", "Небула", "Тор", "Флейм", "Шторм", "Глейшер", "Титано", "Спарк", "Крио", "Электро", "Пси", "Омега", "Альфа", "Вектор"];
+        const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль", "трон", "морф", "корн", "цеце"];
+        const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация", "Гравитация", "Ментальный шторм", "Сверхновая", "Лавовый плевок", "Песчаная буря", "Звуковой удар", "Ледяной луч"];
+        const titlesOrdinary = ["Младший", "Дикий", "Лесной", "Быстрый", "Малый", "Хитрый", "Озорной", "Пятнистый", "Степной", "Речной"];
+        const titlesRare = ["Свирепый", "Охотник", "Ночной", "Грозный", "Теневой", "Искатель", "Следопыт", "Тайный", "Штормовой", "Бродяга"];
+        const titlesEpic = ["Лорд", "Герцог", "Страж", "Рыцарь", "Магистр", "Принц", "Барон", "Ткач Заклинаний", "Паладин", "Алхимик"];
+        const titlesDivine = ["Бессмертный", "Разрушитель", "Избранный", "Древний", "Создатель Миров", "Вечный", "Владыка Хаоса", "Абсолют", "Титан Времени", "Хранитель Вселенной"];
+
+        let currentFilter = 'all';
+        let audioCtx = null;
+        let homeCoords = null; 
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
+            } else if (type === 'radar') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.4);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            } else if (type === 'victory') {
+                const notes = [261.63, 329.63, 392.00, 523.25];
+                notes.forEach((freq, index) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g); g.connect(audioCtx.destination);
+                    o.frequency.setValueAtTime(freq, now + index * 0.1);
+                    g.gain.setValueAtTime(0.2, now + index * 0.1);
+                    g.gain.exponentialRampToValueAtTime(0.01, now + index * 0.1 + 0.3);
+                    o.start(now + index * 0.1); o.stop(now + index * 0.1 + 0.3);
+                });
+            }
+        }
+
+        function filterElement(elementName, btnElement) {
+            playSound('click');
+            currentFilter = elementName;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            updateFilteredList();
+            renderGrid(false);
+            window.scrollTo({ top: 0 });
+        }
+
+        function togglePanel() {
+            playSound('click');
+            const bar = document.getElementById('topBar');
+            const btn = document.getElementById('toggleBtn');
+            if (bar.classList.contains('collapsed')) {
+                bar.classList.remove('collapsed');
+                btn.innerText = "▲ СВЕРНУТЬ";
+            } else {
+                bar.classList.add('collapsed');
+                btn.innerText = "▼ РАЗВЕРНУТЬ";
+            }
+        }
+
+        function seededRandom(seed) {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+        function generateAvatarHTML(id, element, rarity) {
+            let colors = [];
+            if (element.includes("Огонь")) colors = ["#e63946", "#ff5400", "#ff7b00", "#ff9e00"];
+            else if (element.includes("Вода")) colors = ["#00b4d8", "#0077b6", "#90e0ef", "#03045e"];
+            else if (element.includes("Земля")) colors = ["#2a9d8f", "#70e000", "#38b000", "#007200"];
+            else if (element.includes("Воздух")) colors = ["#b5179e", "#7209b7", "#4895ef", "#a2d2ff"];
+
+            if (rarity === "БОЖЕСТВЕННЫЙ") colors.unshift("#ffb703");
+            if (rarity === "Эпический") colors.unshift("#e04545");
+
+            let html = '';
+            for (let i = 1; i <= 9; i++) {
+                let rand = seededRandom(id * i * 4);
+                let color = rand > 0.4 ? colors[Math.floor(rand * colors.length)] : "#141416";
+                html += `<div class="pixel" style="background: ${color}"></div>`;
+            }
+            return html;
+        }
+
+        function generateCreatureLore(p) {
+            let baseSize = p.rarity === "БОЖЕСТВЕННЫЙ" ? 3.5 : p.rarity === "Эпический" ? 2.1 : p.rarity === "Редкий" ? 1.2 : 0.4;
+            let randomModifier = seededRandom(p.id * 11);
+            let height = (baseSize + (randomModifier * 1.5)).toFixed(2);
+            let weight = ((baseSize * baseSize * 25) + (randomModifier * 200)).toFixed(1);
+
+            let habitat = "", description = "";
+
+            if (p.element.includes("Огонь")) {
+                habitat = "🌋 Жерла действующих вулканов, глубины тектонических разломов и заброшенные доменные печи.";
+                description = `Существо по имени ${p.name} рождено из первородной плазмы. Живя в экстремальном тепле, оно способно катализировать лаву внутри своего био-ядра.`;
+            } else if (p.element.includes("Вода")) {
+                habitat = "💧 Коралловые рифы, глубоководные впадины и затопленные неоновые туннели.";
+                description = `Монстр ${p.name} идеально приспособлен к давлению океана. Его чешуя поглощает гидро-акустические волны, делая его невидимкой для обычных радаров.`;
+            } else if (p.element.includes("Земля")) {
+                habitat = "⛰️ Заброшенные изумрудные шахты, вековые чащи и подземные лабиринты.";
+                description = `Древний обитатель суши ${p.name} обладает телом из кремниевых соединений. Оно буквально сливается с горными породами и питается редкими минералами.`;
+            } else if (p.element.includes("Воздух")) {
+                habitat = "💨 Вершины заоблачных пиков, эпицентры ураганов и слои стратосферы.";
+                description = `Газообразная форма жизни ${p.name} парит на магнитных подушках. Оно способно преобразовывать атмосферное давление в мощные кинетические заряды.`;
+            }
+
+            let сюжетныйИндекс = Math.floor(seededRandom(p.id * 45) * 5);
+            let истории = [
+                ` Согласно архивным хроникам, этот экземпляр под номером #${p.id} был зафиксирован во время великого сдвига плит. Местные легенды гласят, что появление особи предвещает резкую смену погоды в округе.`,
+                ` Исследователи Ink zoo отмечают, что у данной особи уникальная структура ДНК. Будучи в чине "${p.name.split(' ').pop()}", существо руководит небольшими стаями своего вида и координирует их миграцию.`,
+                ` Данный представитель расы примечателен тем, что в детстве перенес сильную энергетическую мутацию. Это развило в нем невероятную тягу к маскировке — оно часами может неподвижно выслеживать добычу.`,
+                ` Старейшины называют этого монстра Хранителем Очага. Архивы подтверждают, что #${p.id} обладает редким даром эмпатии и способно предупреждать других лесных обитателей о приближении уличных сканеров.`,
+                ` Невероятно гордый и независимый экземпляр. Из-за своего статуса звания оно никогда не вступает в бой первым, предпочитая ослеплять противника яркой вспышкой накопленной био-энергии.`
+            ];
+
+            return {
+                height: height + " м",
+                weight: weight > 1000 ? (weight / 1000).toFixed(2) + " т" : weight + " кг",
+                habitat: habitat,
+                description: description + истории[сюжетныйИндекс]
+            };
+        }
+        function generatePokedex() {
+            let list = [];
+            for (let i = 1; i <= 1000; i++) {
+                let r1 = seededRandom(i * 3); let r2 = seededRandom(i * 7); let r3 = seededRandom(i * 13); let r4 = seededRandom(i * 19);
+                let elem = elements[Math.floor(r1 * elements.length)];
+                let baseName = prefixes[Math.floor(r2 * prefixes.length)] + roots[Math.floor(r3 * roots.length)];
+                let ability = abilities[Math.floor(r1 * abilities.length)];
+                
+                let rarity, chance, title;
+                if (i <= 500) { rarity = "Обычный"; chance = 0.120; title = titlesOrdinary[Math.floor(r4 * titlesOrdinary.length)]; }
+                else if (i <= 850) { rarity = "Редкий"; chance = 0.085; title = titlesRare[Math.floor(r4 * titlesRare.length)]; }
+                else if (i <= 970) { rarity = "Эпический"; chance = 0.066; title = titlesEpic[Math.floor(r4 * titlesEpic.length)]; }
+                else { rarity = "БОЖЕСТВЕННЫЙ"; chance = 0.066; title = titlesDivine[Math.floor(r4 * titlesDivine.length)]; }
+
+                let fullName = `${baseName} ${title}`;
+                list.push({ id: i, name: fullName, element: elem, ability, rarity, chance_pct: chance.toFixed(3) });
+            }
+            return list;
+        }
+
+        const allCreatures = generatePokedex();
+        let myCollection = JSON.parse(localStorage.getItem('ink_zoo_permanent_bag_1000')) || [];
 
         let itemsToShow = 40; 
         let filteredCreatures = [];
@@ -186,13 +351,11 @@
             return myCollection.filter(item => item.id === id).length;
         }
 
-        // Автономная функция детального просмотра карточки без ошибок вывода
         function openModal(id) {
             playSound('click');
             const p = allCreatures.find(item => item.id === id);
             const copiesCount = getCopiesCount(id);
             const lore = generateCreatureLore(p);
-
             const firstCaught = myCollection.find(item => item.id === id);
             
             const imgEl = document.getElementById('modalPhotoImg');
@@ -217,8 +380,6 @@
             }
 
             document.getElementById('modalName').innerText = p.name;
-            
-            // Наполнение главного контейнера modalInfoBlock всей текстовой справкой
             document.getElementById('modalInfoBlock').innerHTML = `
                 <div>Статус: <b>${copiesCount > 0 ? 'В ЗООПАРКЕ' : '🔒 ДИКИЙ'}</b></div>
                 <div>Стихия: <b>${p.element}</b></div>
@@ -241,7 +402,6 @@
             
             document.getElementById('modalBadge').innerHTML = `<span class="badge badge-${p.rarity}">${p.rarity}</span>`;
             document.getElementById('modalAvatarBox').innerHTML = generateAvatarHTML(p.id, p.element, p.rarity);
-
             document.getElementById('modalOverlay').style.display = 'flex';
         }
 
@@ -249,12 +409,10 @@
             document.getElementById('modalOverlay').style.display = 'none';
         }
 
-        // Просмотр снимка на весь экран
         function openFullPhoto() {
             playSound('click');
             const miniSrc = document.getElementById('modalPhotoImg').src;
             if (!miniSrc) return;
-            
             document.getElementById('fullPhotoImg').src = miniSrc;
             document.getElementById('fullPhotoOverlay').style.display = 'flex';
         }
@@ -263,6 +421,7 @@
             playSound('click');
             document.getElementById('fullPhotoOverlay').style.display = 'none';
         }
+
         function checkAchievements() {
             const ownedUniqueIds = new Set(myCollection.map(c => c.id));
             let counts = { "Огонь 🔥": 0, "Вода 💧": 0, "Земля ⛰️": 0, "Воздух 💨": 0 };
@@ -335,7 +494,6 @@
             document.getElementById('bag-count').innerText = ownedUniqueIds.size;
             checkAchievements();
         }
-
         window.addEventListener('scroll', () => {
             if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
                 if (document.getElementById('pokedex-grid').children.length < filteredCreatures.length) {
@@ -344,7 +502,6 @@
             }
         });
 
-        // АНАЛИЗАТОР ЦВЕТА С КАМЕРЫ (Считывает пиксели и определяет доминирующую стихию)
         function analyzeDominantElement() {
             const video = document.getElementById('camera-view');
             const canvas = document.getElementById('analysis-canvas');
@@ -404,7 +561,7 @@
                 return null;
             }
         }
-        // РЕАЛЬНЫЙ СКАНИРУЮЩИЙ ДВИЖОК: АНАЛИЗ ЦВЕТА + СНИМОК КАДРА + GPS + АВТОЗАКРЫТИЕ
+
         async function triggerCapture() {
             const video = document.getElementById('camera-view');
             const status = document.getElementById('status');
@@ -452,8 +609,6 @@
             setTimeout(() => {
                 clearInterval(radarSoundInterval);
                 let dominantElement = analyzeDominantElement();
-
-                // Делаем снимок кадра прямо сейчас, ПОКА КАМЕРА ОТКРЫТА
                 let photoBase64 = takeSnapshot();
 
                 let rarityRoll = Math.random();
@@ -471,22 +626,18 @@
                     else targetRarity = "Обычный";
                 }
 
-                // ЖЕСТКИЙ ПРИРОДНЫЙ ФИЛЬТР: Земля не водится в воде и т.д.
                 let allowedElements = [dominantElement]; 
-                
                 if (dominantElement === "Вода 💧") allowedElements.push("Воздух 💨"); 
                 if (dominantElement === "Огонь 🔥") allowedElements.push("Воздух 💨"); 
                 if (dominantElement === "Земля ⛰️") allowedElements.push("Огонь 🔥"); 
                 if (dominantElement === "Воздух 💨") allowedElements.push("Вода 💧"); 
 
-                // Фильтруем пулы строго по правилам экологической совместимости
                 let pool = allCreatures.filter(c => c.rarity === targetRarity && allowedElements.includes(c.element));
                 if (pool.length === 0) pool = allCreatures.filter(c => c.rarity === targetRarity);
                 
                 let caught = pool[Math.floor(Math.random() * pool.length)];
                 const isNew = !myCollection.some(item => item.id === caught.id);
                 
-                // Вшиваем фотографию и геопозицию прямо в объект рюкзака
                 let caughtCopy = {
                     ...caught,
                     lat: currentLat,
@@ -511,7 +662,6 @@
                 renderGrid(false);
                 btn.disabled = false;
                 
-                // Автоматическое закрытие и полное отключение камеры
                 video.classList.remove('scanning');
                 if (video.srcObject) {
                     video.srcObject.getTracks().forEach(track => track.stop());
@@ -537,4 +687,3 @@
     </script>
 </body>
 </html>
-
