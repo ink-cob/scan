@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ink zoo 1000 — Бесконечная Охота</title>
+    <title>Ink zoo 1000 — Анализатор Экрана</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #121214; color: #e1e1e6; margin: 0; padding: 1vw; width: 100%; min-height: 100vh; overflow-x: hidden; }
         
-        /* Верхняя панель управления */
+        /* Фиксированная верхняя панель управления */
         .top-bar { display: flex; flex-direction: column; gap: 12px; background: #1e1e24; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 15px; position: sticky; top: 10px; z-index: 100; width: 100%; transition: max-height 0.2s ease-in-out; }
         .top-controls { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; }
         
@@ -43,11 +43,13 @@
         
         .counter-badge { background: #29292e; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 13px; border: 1px solid #323238; text-align: center; }
         .status-box { font-style: italic; color: #a8a8b3; padding: 10px; border-radius: 6px; background: #141416; min-width: 180px; font-size: 12px; text-align: center; flex: 1; }
-        #camera-view { width: 140px; height: 95px; display: none; background: #000; border-radius: 6px; transform: scaleX(-1); object-fit: cover; border: 2px solid #04d361; }
+        
+        /* ПРАВИЛЬНАЯ НЕ-ЗЕРКАЛЬНАЯ КАМЕРА С ДИНАМИЧЕСКИМ РАЗМЕРОМ */
+        #camera-view { width: 140px; height: 95px; display: none; background: #000; border-radius: 6px; object-fit: cover; border: 2px solid #04d361; transition: width 0.4s ease, height 0.4s ease, max-width 0.4s ease; }
+        #camera-view.scanning { width: 100%; max-width: 320px; height: 200px; }
         
         /* Сетка и карточки */
         .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(100px + 3vw), 1fr)); gap: 6px; width: 100%; padding-bottom: 20px; }
-        
         .card { background: #1e1e24; border: 1px solid #29292e; border-radius: 6px; padding: 6px; position: relative; opacity: 0.2; font-size: 11px; display: flex; flex-direction: column; gap: 1px; width: 100%; align-items: center; text-align: center; cursor: pointer; transform: translateZ(0); will-change: transform, opacity; height: 145px; }
         .card:hover { border-color: #555; }
         .card.owned { opacity: 1; background: #202024; border-width: 2px; }
@@ -101,7 +103,7 @@
             .title-group { text-align: center; width: 100%; }
             .control-buttons { flex-direction: column; width: 100%; align-items: stretch; }
             button { width: 100%; }
-            #camera-view { max-width: 100%; height: 110px; }
+            #camera-view.scanning { max-width: 100%; height: 160px; }
             .pokedex-grid { grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 4px; }
             .medal { font-size: 10px; padding: 4px 8px; }
         }
@@ -114,7 +116,7 @@
         <div class="top-controls">
             <div class="title-group">
                 <h1>🛰️ Ink zoo 1000</h1>
-                <p>Прогресс теперь надёжно сохраняется. Ловите дубликаты сколько угодно!</p>
+                <p>Реальный анализ цвета. Во время сканирования окно камеры плавно расширяется!</p>
             </div>
             <button id="toggleBtn" class="toggle-btn" onclick="togglePanel()">▲ СВЕРНУТЬ</button>
         </div>
@@ -130,6 +132,8 @@
             </div>
 
             <div class="control-buttons">
+                <!-- Скрытый холст для анализа пикселей камеры -->
+                <canvas id="analysis-canvas" style="display:none;" width="32" height="24"></canvas>
                 <video id="camera-view" autoplay playsinline></video>
                 <div id="status" class="status-box">Готов к сканированию местности...</div>
                 <div class="counter-badge">🎒 УНИКАЛЬНЫХ: <span id="bag-count">0</span> / 1000</div>
@@ -171,13 +175,12 @@
     </div>
 
     <script>
-                const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
+        const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
         const prefixes = ["Пиро", "Аква", "Гео", "Аэро", "Вулкан", "Гидро", "Терра", "Зефир", "Сильф", "Некро", "Торнадо", "Цунами", "Магма", "Небула", "Тор", "Флейм", "Шторм", "Глейшер", "Титано", "Спарк", "Крио", "Электро", "Пси", "Омега", "Альфа", "Вектор"];
         const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль", "трон", "морф", "корн", "цеце"];
         const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация", "Гравитация", "Ментальный шторм", "Сверхновая", "Лавовый плевок", "Песчаная буря", "Звуковой удар", "Ледяной луч"];
 
         let currentFilter = 'all';
-        let comboStreak = 0; // Накопительное комбо игрока
 
         function togglePanel() {
             const bar = document.getElementById('topBar');
@@ -196,6 +199,7 @@
             return x - Math.floor(x);
         }
 
+        // Окрашивание аватарок строго в цвета преобладающей стихии
         function generateAvatarHTML(id, element, rarity) {
             let colors = [];
             if (element.includes("Огонь")) {
@@ -220,6 +224,7 @@
             return html;
         }
 
+        // Построение базы данных Ink zoo на 1000 существ
         function generatePokedex() {
             let list = [];
             for (let i = 1; i <= 1000; i++) {
@@ -232,6 +237,7 @@
                 let ability = abilities[Math.floor(r1 * abilities.length)];
                 
                 let rarity, chance;
+                // Распределение: 500 Обычных, 350 Редких, 120 Эпических, 30 Божественных
                 if (i <= 500) { rarity = "Обычный"; chance = 0.120; }
                 else if (i <= 850) { rarity = "Редкий"; chance = 0.085; }
                 else if (i <= 970) { rarity = "Эпический"; chance = 0.066; }
@@ -247,12 +253,11 @@
         let itemsToShow = 40; 
         let filteredCreatures = [];
 
-        // Считаем количество копий существа в зоопарке
         function getCopiesCount(id) {
             return myCollection.filter(item => item.id === id).length;
         }
 
-        // Функция детального просмотра карточки
+        // Открытие карточки просмотра
         function openModal(id) {
             const p = allCreatures.find(item => item.id === id);
             const copiesCount = getCopiesCount(id);
@@ -275,7 +280,7 @@
             document.getElementById('modalOverlay').style.display = 'none';
         }
 
-        // Проверка медалей за достижения
+        // Проверка ачивок за полную зачистку стихий
         function checkAchievements() {
             const ownedUniqueIds = new Set(myCollection.map(c => c.id));
             let counts = { "Огонь 🔥": 0, "Вода 💧": 0, "Земля ⛰️": 0, "Воздух 💨": 0 };
@@ -301,7 +306,6 @@
             });
         }
 
-        // Подготовка списка данных перед отрисовкой
         function updateFilteredList() {
             const ownedUniqueIds = new Set(myCollection.map(c => c.id));
             filteredCreatures = allCreatures.filter(p => {
@@ -311,7 +315,7 @@
             });
         }
 
-        // Умная порционная отрисовка сетки
+        // Порционный рендеринг сетки (Lazy Loading) для идеальной плавности кнопок
         function renderGrid(append = false) {
             const grid = document.getElementById('pokedex-grid');
             if (!append) grid.innerHTML = '';
@@ -348,7 +352,7 @@
             document.getElementById('bag-count').innerText = ownedUniqueIds.size;
             checkAchievements();
         }
-        // Слежка за скроллом для бесконечной подгрузки новых карт
+        // Бесконечная подгрузка карточек при прокрутке страницы вниз
         window.addEventListener('scroll', () => {
             if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
                 if (document.getElementById('pokedex-grid').children.length < filteredCreatures.length) {
@@ -357,18 +361,56 @@
             }
         });
 
-        // Быстрое переключение вкладок фильтрации
+        // Переключение фильтров и вкладок
         function filterElement(elementName, btnElement) {
             currentFilter = elementName;
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             btnElement.classList.add('active');
-            
             updateFilteredList();
             renderGrid(false);
             window.scrollTo({ top: 0 });
         }
 
-        // КЛЮЧЕВОЙ ДВИЖОК: ДИНАМИЧЕСКИЙ РАСЧЕТ ВРЕМЕНИ И РЕДКОСТИ ПО ФАКТОРАМ СРЕДЫ
+        // АНАЛИЗАТОР ЦВЕТА С КАМЕРЫ (Считывает пиксели и определяет доминирующую стихию)
+        function analyzeDominantElement() {
+            const video = document.getElementById('camera-view');
+            const canvas = document.getElementById('analysis-canvas');
+            const ctx = canvas.getContext('2d');
+
+            try {
+                // Перерисовываем мини-кадр с камеры на скрытый холст
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+
+                let rSum = 0, gSum = 0, bSum = 0, lightSum = 0;
+
+                // Сканируем пиксели кадра
+                for (let i = 0; i < data.length; i += 4) {
+                    let r = data[i];
+                    let g = data[i+1];
+                    let b = data[i+2];
+
+                    if (r > g * 1.2 && r > b * 1.2) rSum++; 
+                    else if (b > r * 1.2 && b > g * 1.2) bSum++; 
+                    else if (g > r * 1.1 && g > b * 1.1) gSum++; 
+                    
+                    if (r > 190 && g > 190 && b > 190) lightSum++;
+                }
+
+                let max = Math.max(rSum, bSum, gSum, lightSum);
+                if (max === 0) return elements[Math.floor(Math.random() * elements.length)]; 
+                
+                if (max === rSum) return "Огонь 🔥";
+                if (max === bSum) return "Вода 💧";
+                if (max === gSum) return "Земля ⛰️";
+                return "Воздух 💨";
+            } catch (err) {
+                return elements[Math.floor(Math.random() * elements.length)];
+            }
+        }
+
+        // РЕАЛЬНЫЙ СКАНИРУЮЩИЙ ДВИЖОК: ПЛАВНОЕ РАСШИРЕНИЕ ОКНА И РАНДОМНЫЕ СБОИ
         async function triggerCapture() {
             const video = document.getElementById('camera-view');
             const status = document.getElementById('status');
@@ -376,124 +418,88 @@
             
             btn.disabled = true;
             
-            // Базовое расчетное время сканирования (3000мс)
-            let scanDuration = 3000; 
-            let environmentBonusLog = [];
-
-            // Фактор 1: Время суток (День/Ночь)
-            const currentHour = new Date().getHours();
-            const isNight = currentHour < 6 || currentHour > 18;
-            if (isNight) {
-                scanDuration -= 200; // Ночью сканер калибруется быстрее
-                environmentBonusLog.push("🌙 Ночной режим");
-            } else {
-                environmentBonusLog.push("☀️ Дневной режим");
-            }
-
-            // Фактор 2: День недели (Бонус выходного дня)
-            const currentDay = new Date().getDay();
-            const isWeekend = currentDay === 0 || currentDay === 6; // Воскресенье или Суббота
-
-            // Фактор 3: Уровень заряда батареи смартфона/ноутбука
-            let batteryMultiplier = 1;
-            try {
-                if (navigator.getBattery) {
-                    const battery = await navigator.getBattery();
-                    batteryMultiplier = battery.level; // от 0.0 до 1.0
-                    if (battery.level > 0.75) {
-                        scanDuration -= 500; // Разгон при высоком заряде
-                        environmentBonusLog.push("⚡ Турбо-заряд батареи");
-                    }
-                }
-            } catch(e) {}
-
-            // Фактор 4: Накопленный Комбо-стрик игрока (каждая поимка ускоряет следующую)
-            const comboReduction = Math.min(comboStreak * 150, 1500); // Максимум скидка 1.5 секунды
-            scanDuration -= comboReduction;
-            if (comboStreak > 0) environmentBonusLog.push(`🔥 Комбо х${comboStreak}`);
-
-            // Фактор 5: Дополнительный случайный шум матрицы (погода/помехи)
-            const weatherNoise = Math.floor(Math.random() * 800) - 400; // случайное отклонение +/- 400мс
-            scanDuration += weatherNoise;
-
-            // Гарантируем, что сканирование не упадет ниже 600 миллисекунд во избежание багов
-            if (scanDuration < 600) scanDuration = 600;
-
-            status.innerHTML = `📡 Скан матрицы... (${(scanDuration/1000).toFixed(1)}с)<br><small style="color:#a8a8b3">${environmentBonusLog.join(' | ')}</small>`;
-            
             try {
                 if (!video.srcObject) {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                     video.srcObject = stream;
-                    video.style.display = "block";
                 }
-            } catch (err) {}
+                video.style.display = "block";
+                video.classList.add('scanning');
+            } catch (err) {
+                status.innerText = "❌ Ошибка доступа к камере!";
+                btn.disabled = false;
+                return;
+            }
+
+            let scanTime = Math.floor(Math.random() * 3000) + 1500;
+            status.innerHTML = `📡 Идет глубокое сканирование цвета... (${(scanTime/1000).toFixed(1)}с)`;
 
             setTimeout(() => {
-                let roll = Math.random();
-                let targetRarity;
-                
-                // Модифицируем шансы в зависимости от природных факторов
-                if (isWeekend) {
-                    // На выходных шанс Эпиков удваивается за счет уменьшения пула Обычных
-                    if (roll <= 0.02) targetRarity = "БОЖЕСТВЕННЫЙ";
-                    else if (roll <= 0.18) targetRarity = "Эпический"; 
-                    else if (roll <= 0.45) targetRarity = "Редкий";
+                let dominantElement = analyzeDominantElement();
+                let randomEventRoll = Math.random();
+
+                if (randomEventRoll < 0.20) {
+                    // 20% шанс на побег существа
+                    status.innerHTML = `<span style="color:#e04545">❌ Существо испугалось и скрылось в текстурах матрицы!</span>`;
+                } 
+                else if (randomEventRoll < 0.35) {
+                    // 15% шанс требования укрупнить масштаб кадра
+                    status.innerHTML = `<span style="color:#ffb703">⚠️ Слишком мелкий объект! Приблизьте камеру ближе к цвету!</span>`;
+                } 
+                else {
+                    // Успешная честная поимка по цвету!
+                    let rarityRoll = Math.random();
+                    let targetRarity;
+                    
+                    if (rarityRoll <= 0.02) targetRarity = "БОЖЕСТВЕННЫЙ";
+                    else if (rarityRoll <= 0.10) targetRarity = "Эпический";
+                    else if (rarityRoll <= 0.40) targetRarity = "Редкий";
                     else targetRarity = "Обычный";
-                } else {
-                    if (roll <= 0.02) targetRarity = "БОЖЕСТВЕННЫЙ";
-                    else if (roll <= 0.10) targetRarity = "Эпический";
-                    else if (roll <= 0.40) targetRarity = "Редкий";
-                    else targetRarity = "Обычный";
-                }
 
-                // Специфический ночной бонус на Божественных существ
-                if (isNight && targetRarity === "Обычный" && Math.random() < 0.05) {
-                    targetRarity = "БОЖЕСТВЕННЫЙ"; // Ночной скрытый шанс 5% апгрейда
-                }
+                    let pool = allCreatures.filter(c => c.rarity === targetRarity && c.element === dominantElement);
+                    
+                    if (pool.length === 0) {
+                        pool = allCreatures.filter(c => c.rarity === targetRarity);
+                    }
+                    
+                    let caught = pool[Math.floor(Math.random() * pool.length)];
+                    const isNew = !myCollection.some(item => item.id === caught.id);
+                    
+                    myCollection.push(caught);
+                    localStorage.setItem('ink_zoo_permanent_bag_1000', JSON.stringify(myCollection));
 
-                let pool = allCreatures.filter(c => c.rarity === targetRarity);
-                let caught = pool[Math.floor(Math.random() * pool.length)];
-
-                const isNew = !myCollection.some(item => item.id === caught.id);
-                
-                myCollection.push(caught);
-                localStorage.setItem('ink_zoo_permanent_bag_1000', JSON.stringify(myCollection));
-
-                // Наращиваем комбо-серию
-                comboStreak++;
-
-                if (isNew) {
-                    status.innerHTML = `🎉 ПОЙМАН НОВЫЙ ВИД: <b style="color:#fff;">${caught.name}</b>!`;
-                } else {
-                    status.innerHTML = `📡 Повторка: <b style="color:#fff;">${caught.name}</b> (Всего в зоо: ${getCopiesCount(caught.id)})`;
+                    if (isNew) {
+                        status.innerHTML = `🎉 По цвету кадра найден НОВЫЙ ВИД: <b style="color:#fff;">${caught.name}</b>!`;
+                    } else {
+                        status.innerHTML = `📡 Поймана повторка по цвету кадра: <b style="color:#fff;">${caught.name}</b> (Всего: ${getCopiesCount(caught.id)})`;
+                    }
                 }
 
                 updateFilteredList();
                 renderGrid(false);
                 btn.disabled = false;
                 
+                video.classList.remove('scanning');
                 if (video.srcObject) {
                     video.srcObject.getTracks().forEach(track => track.stop());
                     video.srcObject = null;
                     video.style.display = "none";
                 }
-            }, scanDuration);
+            }, scanTime);
         }
 
-        // Полный сброс прогресса
+        // Полная очистка зоопарка
         function resetCollection() {
-            if (confirm("Выпустить всех существ из зоопарка?")) {
+            if (confirm("Выпустить всех существ из зоопарка и обнулить дубликаты?")) {
                 myCollection = [];
-                comboStreak = 0;
                 localStorage.removeItem('ink_zoo_permanent_bag_1000');
-                document.getElementById('status').innerText = "Все существа отпущены на волю! Серия комбо сброшена.";
+                document.getElementById('status').innerText = "Все существа отпущены на волю!";
                 updateFilteredList();
                 renderGrid(false);
             }
         }
 
-        // Инициализация при первом запуске
+        // Первый запуск
         updateFilteredList();
         renderGrid(false);
     </script>
