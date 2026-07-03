@@ -3,154 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Глобальный Покедекс онлайн</title>
+    <title>Кибер Покедекс 1000 онлайн</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121214; color: #e1e1e6; margin: 0; padding: 20px; }
-        h1 { text-align: center; margin-bottom: 5px; color: #fff; }
-        .subtitle { text-align: center; color: #a8a8b3; margin-bottom: 25px; }
-        .main-layout { display: flex; max-width: 1400px; margin: 0 auto; gap: 20px; flex-wrap: wrap; }
-        .panel { background: #1e1e24; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .pokedex-panel { flex: 2; min-width: 300px; height: 80vh; overflow-y: auto; }
-        .sidebar-panel { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; }
-        .bag-panel { height: 50vh; overflow-y: auto; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121214; color: #e1e1e6; margin: 0; padding: 10px; }
         
-        button { background: #04d361; color: #fff; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 100%; }
+        /* Верхняя панель управления */
+        .top-bar { display: flex; flex-direction: column; gap: 10px; background: #1e1e24; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 15px; position: sticky; top: 10px; z-index: 100; text-align: center; }
+        .top-controls { display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .title-group h1 { margin: 0; font-size: 22px; color: #fff; }
+        .title-group p { margin: 3px 0 0 0; font-size: 13px; color: #a8a8b3; }
+        
+        button { background: #04d361; color: #fff; border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         button:hover { background: #06b955; }
-        .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+        button:disabled { background: #494950; cursor: not-allowed; }
+        .reset-btn { background: #e04545; }
+        .reset-btn:hover { background: #c73232; }
         
-        .card { background: #29292e; border: 2px solid #323238; border-radius: 8px; padding: 15px; position: relative; opacity: 0.35; transition: 0.3s; }
-        .card.owned { opacity: 1; background: #202024; }
-        .rarity-Обычный { border-color: #7c7c8a; }
-        .rarity-Редкий { border-color: #4ea8de; }
-        .rarity-Эпический { border-color: #aa44ff; }
-        .rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 10px rgba(255,183,3,0.3); }
-        .card.owned.rarity-БОЖЕСТВЕННЫЙ { box-shadow: 0 0 15px #ffb703; }
+        .counter-badge { background: #29292e; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 14px; border: 1px solid #323238; }
+        .status-box { font-style: italic; color: #a8a8b3; padding: 8px; border-radius: 6px; background: #141416; min-width: 250px; font-size: 13px; }
         
-        .badge { position: absolute; top: 12px; right: 12px; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-        .badge-Обычный { background: #7c7c8a; color: #fff; }
-        .badge-Редкий { background: #4ea8de; color: #fff; }
-        .badge-Эпический { background: #aa44ff; color: #fff; }
+        #camera-view { width: 150px; height: 100px; display: none; background: #000; border-radius: 6px; transform: scaleX(-1); object-fit: cover; border: 2px solid #04d361; }
+        
+        /* Ультракомпактная сетка существ */
+        .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; padding-bottom: 20px; }
+        
+        /* Компактные карточки */
+        .card { background: #1e1e24; border: 1px solid #29292e; border-radius: 6px; padding: 8px; position: relative; opacity: 0.25; transition: 0.2s; font-size: 11px; display: flex; flex-direction: column; gap: 2px; }
+        .card.owned { opacity: 1; background: #202024; border-width: 2px; }
+        
+        .rarity-Обычный { border-color: #494950; }
+        .rarity-Редкий { border-color: #2a6f97; }
+        .rarity-Эпический { border-color: #7209b7; }
+        .rarity-БОЖЕСТВЕННЫЙ { border-color: #b5179e; }
+        
+        .card.owned.rarity-Обычный { border-color: #7c7c8a; }
+        .card.owned.rarity-Редкий { border-color: #4ea8de; box-shadow: 0 0 5px rgba(78,168,222,0.2); }
+        .card.owned.rarity-Эпический { border-color: #aa44ff; box-shadow: 0 0 8px rgba(170,68,255,0.3); }
+        .card.owned.rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 12px #ffb703; animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 5px #ffb703; }
+            50% { box-shadow: 0 0 15px #ffb703; }
+            100% { box-shadow: 0 0 5px #ffb703; }
+        }
+        
+        .badge { font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 3px; align-self: flex-start; text-transform: uppercase; }
+        .badge-Обычный { background: #494950; color: #fff; }
+        .badge-Редкий { background: #2a6f97; color: #fff; }
+        .badge-Эпический { background: #7209b7; color: #fff; }
         .badge-БОЖЕСТВЕННЫЙ { background: #ffb703; color: #000; }
         
-        .chance-lbl { font-size: 12px; color: #a8a8b3; margin-top: 8px; }
-        .status-box { font-style: italic; color: #a8a8b3; text-align: center; min-height: 40px; border: 1px dashed #323238; padding: 10px; border-radius: 6px; }
-        .bag-item { background: #29292e; padding: 10px; border-left: 4px solid #04d361; border-radius: 4px; margin-bottom: 8px; font-size: 14px; }
+        .card-name { font-weight: bold; font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .card-elem { color: #a8a8b3; }
+        .card-ability { color: #04d361; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chance-lbl { color: #7c7c8a; font-size: 10px; margin-top: 4px; border-top: 1px solid #29292e; padding-top: 3px; }
         
-        #camera-view { width: 100%; max-height: 200px; display: none; background: #000; border-radius: 6px; margin-top: 10px; transform: scaleX(-1); }
+        .status-tag { font-weight: bold; margin-top: 2px; text-align: right; font-size: 9px; }
     </style>
 </head>
 <body>
 
-    <h1>🛰️ ГЛОВЕРСАЛЬНЫЙ ПОКЕДЕКС НА GITHUB</h1>
-    <div class="subtitle">Полная база данных из 100 существ. Разрешите доступ к камере и соберите их всех!</div>
-    
-    <div class="main-layout">
-        <div class="panel pokedex-panel">
-            <h2 style="margin-top:0;">📊 Список видов (100 покемонов)</h2>
-            <div id="pokedex-grid" class="pokedex-grid"></div>
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ С УПРАВЛЕНИЕМ -->
+    <div class="top-bar">
+        <div class="title-group">
+            <h1>🛰️ МЕГА ПОКЕДЕКС 1000</h1>
+            <p>Все 1000 существ перед вами. Кнопки управления и сканер перенесены вверх сайта.</p>
         </div>
-        
-        <div class="sidebar-panel">
-            <div class="panel">
-                <h2 style="margin-top:0;">📷 Охота на аномалии</h2>
-                <button id="hunt-btn" onclick="triggerCapture()">ИНИЦИИРОВАТЬ СКАНИРОВАНИЕ</button>
-                <video id="camera-view" autoplay playsinline></video>
-                <div id="status" class="status-box" style="margin-top:15px;">Сканер готов к поиску...</div>
-            </div>
-            
-            <div class="panel bag-panel">
-                <h2 style="margin-top:0; color:#04d361;">🎒 Мой Рюкзак (<span id="bag-count">0</span>/100)</h2>
-                <div id="bag-list"></div>
-            </div>
+        <div class="top-controls">
+            <button id="hunt-btn" onclick="triggerCapture()">📷 ИНИЦИИРОВАТЬ СКАНИРОВАНИЕ</button>
+            <video id="camera-view" autoplay playsinline></video>
+            <div id="status" class="status-box">Сканер готов к поиску аномалий...</div>
+            <div class="counter-badge">🎒 РЮКЗАК: <span id="bag-count">0</span> / 1000</div>
+            <button class="reset-btn" onclick="resetCollection()">🗑️ СБРОСИТЬ ПРОГРЕСС</button>
         </div>
     </div>
-    <script>
-        // Базы данных для автоматической генерации 100 существ
-        const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
-        const prefixes = ["Пиро", "Аква", "Гео", "Аэро", "Вулкан", "Гидро", "Терра", "Зефир", "Сильф", "Некро", "Торнадо", "Цунами", "Магма", "Небула", "Тор", "Флейм", "Шторм", "Глейшер", "Титано", "Спарк"];
-        const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль"];
-        const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение 9 баллов", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация в искрах", "Управление гравитацией"];
 
-        // Генератор псевдослучайных чисел с сидом (чтобы база 100 монстров всегда была одинаковой)
+    <!-- КОМПАКТНАЯ СЕТКА СУЩЕСТВ НА ВЕСЬ ЭКРАН -->
+    <div id="pokedex-grid" class="pokedex-grid"></div>
+    <script>
+        // Расширенная база слогов для генерации 1000 уникальных имен без повторов
+        const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
+        const prefixes = ["Пиро", "Аква", "Гео", "Аэро", "Вулкан", "Гидро", "Терра", "Зефир", "Сильф", "Некро", "Торнадо", "Цунами", "Магма", "Небула", "Тор", "Флейм", "Шторм", "Глейшер", "Титано", "Спарк", "Крио", "Электро", "Пси", "Омега", "Альфа", "Вектор"];
+        const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль", "трон", "морф", "корн", "цеце"];
+        const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация", "Гравитация", "Ментальный шторм", "Сверхновая", "Лавовый плевок", "Песчаная буря", "Звуковой удар", "Ледяной луч"];
+
+        // Генератор псевдослучайных чисел с сидом (чтобы у всех игроков база из 1000 монстров была одинаковой)
         function seededRandom(seed) {
             let x = Math.sin(seed++) * 10000;
             return x - Math.floor(x);
         }
 
-        // Создаем энциклопедию покемонов
+        // Создаем огромную базу на 1000 покемонов
         function generatePokedex() {
             let list = [];
-            for (let i = 1; i <= 100; i++) {
-                let r1 = seededRandom(i * 5);
-                let r2 = seededRandom(i * 12);
-                let r3 = seededRandom(i * 24);
+            for (let i = 1; i <= 1000; i++) {
+                let r1 = seededRandom(i * 3);
+                let r2 = seededRandom(i * 7);
+                let r3 = seededRandom(i * 13);
                 
                 let elem = elements[Math.floor(r1 * elements.length)];
                 let name = prefixes[Math.floor(r2 * prefixes.length)] + roots[Math.floor(r3 * roots.length)] + "-" + i;
                 let ability = abilities[Math.floor(r1 * abilities.length)];
                 
                 let rarity, chance;
-                if (i <= 50) { rarity = "Обычный"; chance = 1.2; }
-                else if (i <= 85) { rarity = "Редкий"; chance = 0.85; }
-                else if (i <= 97) { rarity = "Эпический"; chance = 0.66; }
-                else { rarity = "БОЖЕСТВЕННЫЙ"; chance = 0.66; }
+                // Распределение: 500 Обычных (60%), 350 Редких (30%), 120 Эпических (8%), 30 Божественных (2%)
+                if (i <= 500) { rarity = "Обычный"; chance = (60.0 / 500); }
+                else if (i <= 850) { rarity = "Редкий"; chance = (30.0 / 350); }
+                else if (i <= 970) { rarity = "Эпический"; chance = (8.0 / 120); }
+                else { rarity = "БОЖЕСТВЕННЫЙ"; chance = (2.0 / 30); }
 
-                list.push({ id: i, name, element: elem, ability, rarity, chance_pct: chance });
+                list.push({ id: i, name, element: elem, ability, rarity, chance_pct: chance.toFixed(3) });
             }
             return list;
         }
 
         const allCreatures = generatePokedex();
-        // Загружаем сохраненный рюкзак из локальной памяти браузера
-        let myCollection = JSON.parse(localStorage.getItem('pokedex_bag')) || [];
+        let myCollection = JSON.parse(localStorage.getItem('pokedex_bag_1000')) || [];
 
-        // Функция отрисовки интерфейса
+        // Отрисовка ультракомпактной сетки
         function renderUI() {
             const grid = document.getElementById('pokedex-grid');
             grid.innerHTML = '';
             
-            const ownedIds = myCollection.map(c => c.id);
+            const ownedIds = new Set(myCollection.map(c => c.id));
             
             allCreatures.forEach(p => {
-                const isOwned = ownedIds.includes(p.id);
+                const isOwned = ownedIds.has(p.id);
                 grid.innerHTML += `
                     <div class="card rarity-${p.rarity} ${isOwned ? 'owned' : ''}">
-                        <span class="badge badge-${p.rarity}">${p.rarity}</span>
-                        <div style="font-weight:bold; font-size:16px; color:#fff;">${p.name}</div>
-                        <div style="margin-top:5px; font-size:14px;">Стихия: ${p.element}</div>
-                        <div style="font-size:13px; color:#04d361; margin-top:3px;">⚡ ${p.ability}</div>
-                        <div class="chance-lbl">🎯 Шанс: <b>${p.chance_pct}%</b></div>
-                        <div style="margin-top:5px; font-size:11px; font-weight:bold; color:${isOwned ? '#04d361':'#7c7c8a'}">
-                            ${isOwned ? '✅ АКТИВИРОВАН' : '🔒 ЗАБЛОКИРОВАН'}
+                        <span class="badge badge-${p.rarity}">${p.rarity[0]}</span>
+                        <div class="card-name" title="${p.name}">${p.name}</div>
+                        <div class="card-elem">${p.element}</div>
+                        <div class="card-ability" title="${p.ability}">${p.ability}</div>
+                        <div class="chance-lbl">🎯 ${p.chance_pct}%</div>
+                        <div class="status-tag" style="color:${isOwned ? '#04d361':'#494950'}">
+                            ${isOwned ? '✅ ЕСТЬ' : '🔒 НЕТ'}
                         </div>
                     </div>`;
             });
 
-            // Обновляем список в рюкзаке
             document.getElementById('bag-count').innerText = myCollection.length;
-            const bagList = document.getElementById('bag-list');
-            bagList.innerHTML = '';
-            
-            if(myCollection.length === 0) {
-                bagList.innerHTML = '<p style="color:#7c7c8a; text-align:center;">Рюкзак пуст</p>';
-                return;
-            }
-
-            [...myCollection].reverse().forEach(c => {
-                bagList.innerHTML += `<div class="bag-item" style="border-left: 4px solid ${c.rarity==='БОЖЕСТВЕННЫЙ'?'#ffb703':c.rarity==='Эпический'?'#aa44ff':c.rarity==='Редкий'?'#4ea8de':'#7c7c8a'}"><b>${c.name}</b> (${c.element})</div>`;
-            });
         }
 
-        // Функция запуска сканирования через камеру устройства
+        // Запуск сканирования и поимки
         async function triggerCapture() {
             const video = document.getElementById('camera-view');
             const status = document.getElementById('status');
             const btn = document.getElementById('hunt-btn');
             
             btn.disabled = true;
-            status.innerText = "📡 Сканирование пространства через камеру...";
+            status.innerText = "📡 Сканирование пространства...";
             
-            // Включаем видеопоток с веб-камеры прямо на странице сайта
             try {
                 if (!video.srcObject) {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -158,15 +161,13 @@
                     video.style.display = "block";
                 }
             } catch (err) {
-                console.log("Камера недоступна или доступ запрещен");
+                console.log("Камера недоступна");
             }
 
-            // Имитируем процесс сканирования длительностью 2 секунды
             setTimeout(() => {
                 let roll = Math.random();
                 let targetRarity;
                 
-                // Рассчитываем веса редкостей (60% / 30% / 8% / 2%)
                 if (roll <= 0.02) targetRarity = "БОЖЕСТВЕННЫЙ";
                 else if (roll <= 0.10) targetRarity = "Эпический";
                 else if (roll <= 0.40) targetRarity = "Редкий";
@@ -175,28 +176,35 @@
                 let pool = allCreatures.filter(c => c.rarity === targetRarity);
                 let caught = pool[Math.floor(Math.random() * pool.length)];
 
-                // Проверяем, есть ли такое существо уже в рюкзаке
                 if (!myCollection.some(item => item.id === caught.id)) {
                     myCollection.push(caught);
-                    localStorage.setItem('pokedex_bag', JSON.stringify(myCollection));
-                    status.innerHTML = `🎉 Пойман новый вид: <b style="color:#fff;">${caught.name}</b> (${caught.rarity})!`;
+                    localStorage.setItem('pokedex_bag_1000', JSON.stringify(myCollection));
+                    status.innerHTML = `🎉 Пойман новый: <b style="color:#fff;">${caught.name}</b> (${caught.rarity})!`;
                 } else {
-                    status.innerHTML = `📡 Пойман уже знакомый: <b style="color:#fff;">${caught.name}</b> (Дубликат)`;
+                    status.innerHTML = `📡 Повторка: <b style="color:#fff;">${caught.name}</b>`;
                 }
 
                 renderUI();
                 btn.disabled = false;
                 
-                // Выключаем камеру после успешной ловли
                 if (video.srcObject) {
                     video.srcObject.getTracks().forEach(track => track.stop());
                     video.srcObject = null;
                     video.style.display = "none";
                 }
-            }, 2000);
+            }, 1800);
         }
 
-        // Первичный вывод данных на экран при загрузке страницы
+        // Функция полного сброса прогресса
+        function resetCollection() {
+            if (confirm("Вы уверены, что хотите полностью очистить рюкзак и начать заново?")) {
+                myCollection = [];
+                localStorage.removeItem('pokedex_bag_1000');
+                document.getElementById('status').innerText = "Прогресс успешно сброшен. Удачной охоты!";
+                renderUI();
+            }
+        }
+
         renderUI();
     </script>
 </body>
