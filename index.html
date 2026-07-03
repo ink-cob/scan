@@ -3,54 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ink zoo 1000 — Быстрая версия</title>
+    <title>Ink zoo 1000 — Со складной панелью</title>
     <style>
-        /* Резиновый интерфейс без перегрузки процессора */
+        /* Базовые настройки резинового экрана */
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #121214; color: #e1e1e6; margin: 0; padding: 1vw; width: 100%; min-height: 100vh; overflow-x: hidden; }
         
-        /* Панель управления вверху сайта */
-        .top-bar { display: flex; flex-direction: column; gap: 12px; background: #1e1e24; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 15px; position: sticky; top: 10px; z-index: 100; width: 100%; }
+        /* Складная верхняя панель управления */
+        .top-bar { display: flex; flex-direction: column; gap: 12px; background: #1e1e24; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 15px; position: sticky; top: 10px; z-index: 100; width: 100%; transition: max-height 0.3s ease-in-out; }
         .top-controls { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; }
         
-        .title-group { flex: 1; min-width: 200px; text-align: left; }
+        .title-group { flex: 1; min-width: 180px; text-align: left; }
         .title-group h1 { margin: 0; font-size: calc(18px + 0.5vw); color: #fff; }
         .title-group p { margin: 3px 0 0 0; font-size: calc(11px + 0.1vw); color: #a8a8b3; }
         
-        .control-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex: 2; justify-content: flex-end; min-width: 280px; }
+        /* Контейнер скрываемых элементов */
+        .collapsible-content { display: flex; flex-direction: column; gap: 12px; width: 100%; transition: all 0.3s ease; }
+        .top-bar.collapsed .collapsible-content { display: none; }
+        
+        .control-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; width: 100%; justify-content: flex-end; }
         
         /* Кнопки */
-        button { background: #04d361; color: #fff; border: none; padding: 10px 18px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.15s; flex: 1; min-width: 120px; text-align: center; }
+        button { background: #04d361; color: #fff; border: none; padding: 10px 18px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.15s; }
         button:hover { background: #06b955; }
         button:disabled { background: #494950; cursor: not-allowed; }
-        .reset-btn { background: #e04545; min-width: 80px; flex: 0.4; }
+        
+        /* Специальная кнопка СВЕРНУТЬ / РАЗВЕРНУТЬ */
+        .toggle-btn { background: #323238; color: #fff; min-width: 110px; padding: 8px 14px; font-size: 12px; }
+        .toggle-btn:hover { background: #42424a; }
+        
+        .reset-btn { background: #e04545; }
         .reset-btn:hover { background: #c73232; }
         
-        /* Панель сортировки по стихиям */
+        /* Сортировка стихий */
         .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; border-top: 1px solid #29292e; padding-top: 10px; justify-content: center; }
-        .filter-btn { background: #29292e; color: #a8a8b3; border: 1px solid #323238; padding: 6px 14px; font-size: 12px; min-width: 80px; flex: none; }
+        .filter-btn { background: #29292e; color: #a8a8b3; border: 1px solid #323238; padding: 6px 14px; font-size: 12px; min-width: 80px; }
         .filter-btn:hover { background: #323238; color: #fff; }
         .filter-btn.active { background: #04d361; color: #fff; border-color: #04d361; }
         
-        .counter-badge { background: #29292e; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 13px; border: 1px solid #323238; text-align: center; min-width: 130px; }
-        .status-box { font-style: italic; color: #a8a8b3; padding: 10px; border-radius: 6px; background: #141416; flex: 2; min-width: 180px; font-size: 12px; text-align: center; }
+        .counter-badge { background: #29292e; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 13px; border: 1px solid #323238; text-align: center; }
+        .status-box { font-style: italic; color: #a8a8b3; padding: 10px; border-radius: 6px; background: #141416; min-width: 180px; font-size: 12px; text-align: center; flex: 1; }
         
         /* Зеркальная камера */
-        #camera-view { width: 100%; max-width: 140px; height: 95px; display: none; background: #000; border-radius: 6px; transform: scaleX(-1); object-fit: cover; border: 2px solid #04d361; }
+        #camera-view { width: 140px; height: 95px; display: none; background: #000; border-radius: 6px; transform: scaleX(-1); object-fit: cover; border: 2px solid #04d361; }
         
-        /* Сетка и ультракомпактные карточки */
+        /* Резиновая сетка и компактные карточки */
         .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(100px + 3vw), 1fr)); gap: 6px; width: 100%; padding-bottom: 20px; }
-        
         .card { background: #1e1e24; border: 1px solid #29292e; border-radius: 6px; padding: 6px; position: relative; opacity: 0.2; transition: 0.15s; font-size: 11px; display: flex; flex-direction: column; gap: 1px; width: 100%; align-items: center; text-align: center; content-visibility: auto; contain-intrinsic-size: 130px; }
         .card.owned { opacity: 1; background: #202024; border-width: 2px; }
         
-        /* Рамки по редкости */
         .rarity-Обычный { border-color: #494950; }
         .rarity-Редкий { border-color: #2a6f97; }
         .rarity-Эпический { border-color: #7209b7; }
         .rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 8px rgba(255,183,3,0.3); }
         
-        /* УНИКАЛЬНЫЙ КОМПАКТНЫЙ АВАТАР */
+        /* Пиксельный аватар */
         .avatar-box { width: 42px; height: 42px; border-radius: 6px; margin-bottom: 4px; display: flex; flex-wrap: wrap; overflow: hidden; padding: 1px; background: #141416; border: 1px solid #29292e; }
         .pixel { width: 33.33%; height: 33.33%; }
         
@@ -69,43 +76,47 @@
         @media (max-width: 600px) {
             body { padding: 5px; }
             .top-bar { padding: 10px; gap: 8px; }
-            .title-group { text-align: center; }
-            .control-buttons { flex-direction: column; width: 100%; align-items: stretch; }
-            button { width: 100%; }
-            #camera-view { max-width: 100%; height: 110px; }
+            .top-controls { justify-content: center; text-align: center; }
+            .title-group { text-align: center; width: 100%; }
             .pokedex-grid { grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 4px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- ВЕРХНЯЯ ПАНЕЛЬ С УПРАВЛЕНИЕМ -->
-    <div class="top-bar">
+    <!-- СКЛАДНАЯ ВЕРХНЯЯ ПАНЕЛЬ С УПРАВЛЕНИЕМ -->
+    <div id="topBar" class="top-bar">
         <div class="top-controls">
             <div class="title-group">
-                <h1>🛰️ Ink zoo 1000</h1>
-                <p>Турбо-загрузка включена. Аватарки окрашены в цвета стихий!</p>
+                <h1>🛰... Ink zoo 1000</h1>
+                <p>Панель теперь можно свернуть, чтобы удобно смотреть карточки.</p>
             </div>
+            <!-- КНОПКА СВЁРТКИ -->
+            <button id="toggleBtn" class="toggle-btn" onclick="togglePanel()">▲ СВЕРНУТЬ</button>
+        </div>
+        
+        <!-- СКРЫВАЕМАЯ ЧАСТЬ МЕНЮ -->
+        <div class="collapsible-content">
             <div class="control-buttons">
                 <video id="camera-view" autoplay playsinline></video>
                 <div id="status" class="status-box">Готов к сканированию местности...</div>
-                <div class="counter-badge">🎒 ЗОOПАРК: <span id="bag-count">0</span> / 1000</div>
+                <div class="counter-badge">🎒 ЗООПАРК: <span id="bag-count">0</span> / 1000</div>
                 <button id="hunt-btn" onclick="triggerCapture()">📷 ИСКАТЬ</button>
                 <button class="reset-btn" onclick="resetCollection()">🗑️ СБРОС</button>
             </div>
-        </div>
-        
-        <!-- СОРТИРОВКА СТИХИЙ -->
-        <div class="filter-bar">
-            <button class="filter-btn active" onclick="filterElement('all', this)">Все</button>
-            <button class="filter-btn" onclick="filterElement('Огонь 🔥', this)">Огонь 🔥</button>
-            <button class="filter-btn" onclick="filterElement('Вода 💧', this)">Вода 💧</button>
-            <button class="filter-btn" onclick="filterElement('Земля ⛰️', this)">Земля ⛰️</button>
-            <button class="filter-btn" onclick="filterElement('Воздух 💨', this)">Воздух 💨</button>
+            
+            <!-- СОРТИРОВКА СТИХИЙ -->
+            <div class="filter-bar">
+                <button class="filter-btn active" onclick="filterElement('all', this)">Все</button>
+                <button class="filter-btn" onclick="filterElement('Огонь 🔥', this)">Огонь 🔥</button>
+                <button class="filter-btn" onclick="filterElement('Вода 💧', this)">Вода 💧</button>
+                <button class="filter-btn" onclick="filterElement('Земля ⛰️', this)">Земля ⛰️</button>
+                <button class="filter-btn" onclick="filterElement('Воздух 💨', this)">Воздух 💨</button>
+            </div>
         </div>
     </div>
 
-    <!-- РЕЗИНОВАЯ СЕТКА СУЩЕСТВ -->
+    <!-- СЕТКА СУЩЕСТВ -->
     <div id="pokedex-grid" class="pokedex-grid"></div>
     <script>
         const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
@@ -115,16 +126,29 @@
 
         let currentFilter = 'all';
 
+        // Функция сворачивания и разворачивания панели
+        function togglePanel() {
+            const bar = document.getElementById('topBar');
+            const btn = document.getElementById('toggleBtn');
+            
+            if (bar.classList.contains('collapsed')) {
+                bar.classList.remove('collapsed');
+                btn.innerText = "▲ СВЕРНУТЬ";
+            } else {
+                bar.classList.add('collapsed');
+                btn.innerText = "▼ РАЗВЕРНУТЬ";
+            }
+        }
+
         function seededRandom(seed) {
             let x = Math.sin(seed++) * 10000;
             return x - Math.floor(x);
         }
 
-        // ГЕНЕРАТОР АВАТАРОК ПО СТИХИЯМ И РЕДКОСТЯМ
+        // Генератор аватарок по стихиям
         function generateAvatarHTML(id, element, rarity) {
             let colors = [];
             
-            // Выбираем палитру под конкретную стихию
             if (element.includes("Огонь")) {
                 colors = ["#e63946", "#ff5400", "#ff7b00", "#ff9e00"];
             } else if (element.includes("Вода")) {
@@ -135,7 +159,6 @@
                 colors = ["#b5179e", "#7209b7", "#4895ef", "#a2d2ff"];
             }
 
-            // Добавляем премиальный цвет, если существо Божественное или Эпическое
             if (rarity === "БОЖЕСТВЕННЫЙ") colors.unshift("#ffb703");
             if (rarity === "Эпический") colors.unshift("#e04545");
 
@@ -149,7 +172,6 @@
             return html;
         }
 
-        // Быстрая генерация базы без перегрузки ОЗУ
         function generatePokedex() {
             let list = [];
             for (let i = 1; i <= 1000; i++) {
@@ -175,11 +197,8 @@
         const allCreatures = generatePokedex();
         let myCollection = JSON.parse(localStorage.getItem('ink_zoo_bag_fast_1000')) || [];
 
-        // СВЕРХБЫСТРЫЙ ОПТИМИЗИРОВАННЫЙ ВЫВОД КАРТОЧЕК
         function renderUI() {
             const grid = document.getElementById('pokedex-grid');
-            
-            // Используем DocumentFragment, чтобы страница не зависала при сборке 1000 элементов
             const fragment = document.createDocumentFragment();
             const ownedIds = new Set(myCollection.map(c => c.id));
             
@@ -191,7 +210,7 @@
                 elCard.className = `card rarity-${p.rarity} ${isOwned ? 'owned' : ''}`;
                 
                 elCard.innerHTML = `
-                    <span class="badge badge-${p.rarity}">${p.rarity[0]}</span>
+                    <span class="badge badge-${p.rarity}">${p.rarity}</span>
                     ${generateAvatarHTML(p.id, p.element, p.rarity)}
                     <div class="card-name">${p.name}</div>
                     <div class="card-elem">${p.element}</div>
@@ -222,7 +241,7 @@
             const btn = document.getElementById('hunt-btn');
             
             btn.disabled = true;
-            status.innerText = "📡 Сканирование пространства...";
+            status.innerText = "📡 Сканирование...";
             
             try {
                 if (!video.srcObject) {
@@ -278,4 +297,3 @@
     </script>
 </body>
 </html>
-
