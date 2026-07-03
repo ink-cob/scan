@@ -1,113 +1,203 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ИИ Сканер Мониторов</title>
-    <link rel="stylesheet" href="https://cloudflare.com">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Глобальный Покедекс онлайн</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #1e1e2e; color: #ffffff; margin: 0; padding: 15px; }
-        h2 { color: #89b4fa; margin-bottom: 15px; }
-        .btn { border: none; padding: 18px 30px; font-size: 18px; font-weight: bold; border-radius: 12px; cursor: pointer; width: 100%; max-width: 350px; margin: 10px auto; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .btn-upload { background-color: #89b4fa; color: #11111b; }
-        .btn-send { background-color: #a6e3a1; color: #11111b; display: none; }
-        #image-container { max-width: 100%; max-height: 60vh; margin: 15px auto; display: none; background: #313244; border-radius: 8px; overflow: hidden; }
-        #preview-img { max-width: 100%; display: block; }
-        input[type="file"] { display: none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121214; color: #e1e1e6; margin: 0; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 5px; color: #fff; }
+        .subtitle { text-align: center; color: #a8a8b3; margin-bottom: 25px; }
+        .main-layout { display: flex; max-width: 1400px; margin: 0 auto; gap: 20px; flex-wrap: wrap; }
+        .panel { background: #1e1e24; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .pokedex-panel { flex: 2; min-width: 300px; height: 80vh; overflow-y: auto; }
+        .sidebar-panel { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; }
+        .bag-panel { height: 50vh; overflow-y: auto; }
+        
+        button { background: #04d361; color: #fff; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; width: 100%; }
+        button:hover { background: #06b955; }
+        .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+        
+        .card { background: #29292e; border: 2px solid #323238; border-radius: 8px; padding: 15px; position: relative; opacity: 0.35; transition: 0.3s; }
+        .card.owned { opacity: 1; background: #202024; }
+        .rarity-Обычный { border-color: #7c7c8a; }
+        .rarity-Редкий { border-color: #4ea8de; }
+        .rarity-Эпический { border-color: #aa44ff; }
+        .rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 10px rgba(255,183,3,0.3); }
+        .card.owned.rarity-БОЖЕСТВЕННЫЙ { box-shadow: 0 0 15px #ffb703; }
+        
+        .badge { position: absolute; top: 12px; right: 12px; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-Обычный { background: #7c7c8a; color: #fff; }
+        .badge-Редкий { background: #4ea8de; color: #fff; }
+        .badge-Эпический { background: #aa44ff; color: #fff; }
+        .badge-БОЖЕСТВЕННЫЙ { background: #ffb703; color: #000; }
+        
+        .chance-lbl { font-size: 12px; color: #a8a8b3; margin-top: 8px; }
+        .status-box { font-style: italic; color: #a8a8b3; text-align: center; min-height: 40px; border: 1px dashed #323238; padding: 10px; border-radius: 6px; }
+        .bag-item { background: #29292e; padding: 10px; border-left: 4px solid #04d361; border-radius: 4px; margin-bottom: 8px; font-size: 14px; }
+        
+        #camera-view { width: 100%; max-height: 200px; display: none; background: #000; border-radius: 6px; margin-top: 10px; transform: scaleX(-1); }
     </style>
 </head>
 <body>
-    <h2>ИИ МОБИЛЬНЫЙ СКАНЕР</h2>
+
+    <h1>🛰️ ГЛОВЕРСАЛЬНЫЙ ПОКЕДЕКС НА GITHUB</h1>
+    <div class="subtitle">Полная база данных из 100 существ. Разрешите доступ к камере и соберите их всех!</div>
     
-    <label class="btn btn-upload" id="upload-label">
-        📸 СДЕЛАТЬ ФОТО / ГАЛЕРЕЯ
-        <input type="file" id="file-input" accept="image/*" capture="environment">
-    </label>
-
-    <div id="image-container">
-        <img id="preview-img">
+    <div class="main-layout">
+        <div class="panel pokedex-panel">
+            <h2 style="margin-top:0;">📊 Список видов (100 покемонов)</h2>
+            <div id="pokedex-grid" class="pokedex-grid"></div>
+        </div>
+        
+        <div class="sidebar-panel">
+            <div class="panel">
+                <h2 style="margin-top:0;">📷 Охота на аномалии</h2>
+                <button id="hunt-btn" onclick="triggerCapture()">ИНИЦИИРОВАТЬ СКАНИРОВАНИЕ</button>
+                <video id="camera-view" autoplay playsinline></video>
+                <div id="status" class="status-box" style="margin-top:15px;">Сканер готов к поиску...</div>
+            </div>
+            
+            <div class="panel bag-panel">
+                <h2 style="margin-top:0; color:#04d361;">🎒 Мой Рюкзак (<span id="bag-count">0</span>/100)</h2>
+                <div id="bag-list"></div>
+            </div>
+        </div>
     </div>
-
-    <button class="btn btn-send" id="send-btn">⚡ ОТПРАВИТЬ В ИИ НА ПК</button>
-
-    <script src="https://cloudflare.com"></script>
     <script>
-        // =====================================================================
-        // НАСТРОЙКА НАПРАВЛЕНИЯ (ЗАМЕНИТЕ НА СВОИ ДАННЫЕ ИЗ TELEGRAM)
-        // =====================================================================
-        const TG_TOKEN = "СЮДА_ВСТАВЬТЕ_ТОКЕН_ВАШЕГО_БОТА";
-        const TG_CHAT_ID = "СЮДА_ВСТАВЬТЕ_ВАШ_CHAT_ID";
+        // Базы данных для автоматической генерации 100 существ
+        const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
+        const prefixes = ["Пиро", "Аква", "Гео", "Аэро", "Вулкан", "Гидро", "Терра", "Зефир", "Сильф", "Некро", "Торнадо", "Цунами", "Магма", "Небула", "Тор", "Флейм", "Шторм", "Глейшер", "Титано", "Спарк"];
+        const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль"];
+        const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение 9 баллов", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация в искрах", "Управление гравитацией"];
 
-        let cropper;
-        const fileInput = document.getElementById('file-input');
-        const previewImg = document.getElementById('preview-img');
-        const imgContainer = document.getElementById('image-container');
-        const sendBtn = document.getElementById('send-btn');
-        const uploadLabel = document.getElementById('upload-label');
-
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                previewImg.src = event.target.result;
-                imgContainer.style.display = 'block';
-                sendBtn.style.display = 'block';
-                uploadLabel.innerText = "🔄 ПЕРЕСНЯТЬ ФОТО";
-
-                if (cropper) cropper.destroy();
-                
-                cropper = new Cropper(previewImg, {
-                    viewMode: 1,
-                    autoCropArea: 0.9,
-                    movable: true,
-                    zoomable: true,
-                    rotatable: false,
-                    scalable: false
-                });
-            };
-            reader.readAsDataURL(file);
-        });
-
-        sendBtn.addEventListener('click', function() {
-            if (!cropper) return;
-            
-            sendBtn.disabled = true;
-            sendBtn.innerText = "⏳ ИДЕТ ОТПРАВКА...";
-
-            canvas = cropper.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600 });
-            
-            canvas.toBlob(function(blob) {
-                const formData = new FormData();
-                formData.append('chat_id', TG_CHAT_ID);
-                formData.append('photo', blob, 'monitor_crop.jpg');
-
-                // Отправляем вырезанное изображение напрямую в Telegram бота
-                fetch(`https://telegram.org{TG_TOKEN}/sendPhoto`, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.ok) {
-                        alert("Успешно отправлено! ИИ на ПК уже обрабатывает строку.");
-                        location.reload();
-                    } else {
-                        alert("Ошибка Telegram: " + data.description);
-                        resetButton();
-                    }
-                })
-                .catch(err => {
-                    alert("Ошибка сети: " + err);
-                    resetButton();
-                });
-            }, 'image/jpeg', 0.85);
-        });
-
-        function resetButton() {
-            sendBtn.disabled = false;
-            sendBtn.innerText = "⚡ ОТПРАВИТЬ В ИИ НА ПК";
+        // Генератор псевдослучайных чисел с сидом (чтобы база 100 монстров всегда была одинаковой)
+        function seededRandom(seed) {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
         }
+
+        // Создаем энциклопедию покемонов
+        function generatePokedex() {
+            let list = [];
+            for (let i = 1; i <= 100; i++) {
+                let r1 = seededRandom(i * 5);
+                let r2 = seededRandom(i * 12);
+                let r3 = seededRandom(i * 24);
+                
+                let elem = elements[Math.floor(r1 * elements.length)];
+                let name = prefixes[Math.floor(r2 * prefixes.length)] + roots[Math.floor(r3 * roots.length)] + "-" + i;
+                let ability = abilities[Math.floor(r1 * abilities.length)];
+                
+                let rarity, chance;
+                if (i <= 50) { rarity = "Обычный"; chance = 1.2; }
+                else if (i <= 85) { rarity = "Редкий"; chance = 0.85; }
+                else if (i <= 97) { rarity = "Эпический"; chance = 0.66; }
+                else { rarity = "БОЖЕСТВЕННЫЙ"; chance = 0.66; }
+
+                list.push({ id: i, name, element: elem, ability, rarity, chance_pct: chance });
+            }
+            return list;
+        }
+
+        const allCreatures = generatePokedex();
+        // Загружаем сохраненный рюкзак из локальной памяти браузера
+        let myCollection = JSON.parse(localStorage.getItem('pokedex_bag')) || [];
+
+        // Функция отрисовки интерфейса
+        function renderUI() {
+            const grid = document.getElementById('pokedex-grid');
+            grid.innerHTML = '';
+            
+            const ownedIds = myCollection.map(c => c.id);
+            
+            allCreatures.forEach(p => {
+                const isOwned = ownedIds.includes(p.id);
+                grid.innerHTML += `
+                    <div class="card rarity-${p.rarity} ${isOwned ? 'owned' : ''}">
+                        <span class="badge badge-${p.rarity}">${p.rarity}</span>
+                        <div style="font-weight:bold; font-size:16px; color:#fff;">${p.name}</div>
+                        <div style="margin-top:5px; font-size:14px;">Стихия: ${p.element}</div>
+                        <div style="font-size:13px; color:#04d361; margin-top:3px;">⚡ ${p.ability}</div>
+                        <div class="chance-lbl">🎯 Шанс: <b>${p.chance_pct}%</b></div>
+                        <div style="margin-top:5px; font-size:11px; font-weight:bold; color:${isOwned ? '#04d361':'#7c7c8a'}">
+                            ${isOwned ? '✅ АКТИВИРОВАН' : '🔒 ЗАБЛОКИРОВАН'}
+                        </div>
+                    </div>`;
+            });
+
+            // Обновляем список в рюкзаке
+            document.getElementById('bag-count').innerText = myCollection.length;
+            const bagList = document.getElementById('bag-list');
+            bagList.innerHTML = '';
+            
+            if(myCollection.length === 0) {
+                bagList.innerHTML = '<p style="color:#7c7c8a; text-align:center;">Рюкзак пуст</p>';
+                return;
+            }
+
+            [...myCollection].reverse().forEach(c => {
+                bagList.innerHTML += `<div class="bag-item" style="border-left: 4px solid ${c.rarity==='БОЖЕСТВЕННЫЙ'?'#ffb703':c.rarity==='Эпический'?'#aa44ff':c.rarity==='Редкий'?'#4ea8de':'#7c7c8a'}"><b>${c.name}</b> (${c.element})</div>`;
+            });
+        }
+
+        // Функция запуска сканирования через камеру устройства
+        async function triggerCapture() {
+            const video = document.getElementById('camera-view');
+            const status = document.getElementById('status');
+            const btn = document.getElementById('hunt-btn');
+            
+            btn.disabled = true;
+            status.innerText = "📡 Сканирование пространства через камеру...";
+            
+            // Включаем видеопоток с веб-камеры прямо на странице сайта
+            try {
+                if (!video.srcObject) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = stream;
+                    video.style.display = "block";
+                }
+            } catch (err) {
+                console.log("Камера недоступна или доступ запрещен");
+            }
+
+            // Имитируем процесс сканирования длительностью 2 секунды
+            setTimeout(() => {
+                let roll = Math.random();
+                let targetRarity;
+                
+                // Рассчитываем веса редкостей (60% / 30% / 8% / 2%)
+                if (roll <= 0.02) targetRarity = "БОЖЕСТВЕННЫЙ";
+                else if (roll <= 0.10) targetRarity = "Эпический";
+                else if (roll <= 0.40) targetRarity = "Редкий";
+                else targetRarity = "Обычный";
+
+                let pool = allCreatures.filter(c => c.rarity === targetRarity);
+                let caught = pool[Math.floor(Math.random() * pool.length)];
+
+                // Проверяем, есть ли такое существо уже в рюкзаке
+                if (!myCollection.some(item => item.id === caught.id)) {
+                    myCollection.push(caught);
+                    localStorage.setItem('pokedex_bag', JSON.stringify(myCollection));
+                    status.innerHTML = `🎉 Пойман новый вид: <b style="color:#fff;">${caught.name}</b> (${caught.rarity})!`;
+                } else {
+                    status.innerHTML = `📡 Пойман уже знакомый: <b style="color:#fff;">${caught.name}</b> (Дубликат)`;
+                }
+
+                renderUI();
+                btn.disabled = false;
+                
+                // Выключаем камеру после успешной ловли
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                    video.style.display = "none";
+                }
+            }, 2000);
+        }
+
+        // Первичный вывод данных на экран при загрузке страницы
+        renderUI();
     </script>
 </body>
 </html>
