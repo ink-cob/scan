@@ -179,164 +179,6 @@
         </div>
     </div>
 
-    <script>
-                const elements = ["Огонь 🔥", "Вода 💧", "Земля ⛰️", "Воздух 💨"];
-        const prefixes = ["Пиро", "Аква", "Гео", "Аэро", "Вулкан", "Гидро", "Терра", "Зефир", "Сильф", "Некро", "Торнадо", "Цунами", "Магма", "Небула", "Тор", "Флейм", "Шторм", "Глейшер", "Титано", "Спарк", "Крио", "Электро", "Пси", "Омега", "Альфа", "Вектор"];
-        const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль", "трон", "морф", "корн", "цеце"];
-        const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация", "Гравитация", "Ментальный шторм", "Сверхновая", "Лавовый плевок", "Песчаная буря", "Звуковой удар", "Ледяной луч"];
-
-        const titlesOrdinary = ["Младший", "Дикий", "Лесной", "Быстрый", "Малый", "Хитрый", "Озорной", "Пятнистый", "Степной", "Речной"];
-        const titlesRare = ["Свирепый", "Охотник", "Ночной", "Грозный", "Теневой", "Искатель", "Следопыт", "Тайный", "Штормовой", "Бродяга"];
-        const titlesEpic = ["Лорд", "Герцог", "Страж", "Рыцарь", "Магистр", "Принц", "Барон", "Ткач Заклинаний", "Паладин", "Алхимик"];
-        const titlesDivine = ["Бессмертный", "Разрушитель", "Избранный", "Древний", "Создатель Миров", "Вечный", "Владыка Хаоса", "Абсолют", "Титан Времени", "Хранитель Вселенной"];
-
-        let currentFilter = 'all';
-        let audioCtx = null;
-        let homeCoords = null; 
-
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-
-        // Синтезатор звуков (SFX)
-        function playSound(type) {
-            initAudio();
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
-
-            if (type === 'click') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                osc.start(now); osc.stop(now + 0.08);
-            } else if (type === 'radar') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.linearRampToValueAtTime(600, now + 0.4);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
-                osc.start(now); osc.stop(now + 0.4);
-            } else if (type === 'victory') {
-                const notes = [261.63, 329.63, 392.00, 523.25];
-                notes.forEach((freq, index) => {
-                    const o = audioCtx.createOscillator();
-                    const g = audioCtx.createGain();
-                    o.connect(g); g.connect(audioCtx.destination);
-                    o.frequency.setValueAtTime(freq, now + index * 0.1);
-                    g.gain.setValueAtTime(0.2, now + index * 0.1);
-                    g.gain.exponentialRampToValueAtTime(0.01, now + index * 0.1 + 0.3);
-                    o.start(now + index * 0.1); o.stop(now + index * 0.1 + 0.3);
-                });
-            }
-        }
-
-        function togglePanel() {
-            playSound('click');
-            const bar = document.getElementById('topBar');
-            const btn = document.getElementById('toggleBtn');
-            if (bar.classList.contains('collapsed')) {
-                bar.classList.remove('collapsed');
-                btn.innerText = "▲ СВЕРНУТЬ";
-            } else {
-                bar.classList.add('collapsed');
-                btn.innerText = "▼ РАЗВЕРНУТЬ";
-            }
-        }
-
-        function seededRandom(seed) {
-            let x = Math.sin(seed++) * 10000;
-            return x - Math.floor(x);
-        }
-
-        function generateAvatarHTML(id, element, rarity) {
-            let colors = [];
-            if (element.includes("Огонь")) colors = ["#e63946", "#ff5400", "#ff7b00", "#ff9e00"];
-            else if (element.includes("Вода")) colors = ["#00b4d8", "#0077b6", "#90e0ef", "#03045e"];
-            else if (element.includes("Земля")) colors = ["#2a9d8f", "#70e000", "#38b000", "#007200"];
-            else if (element.includes("Воздух")) colors = ["#b5179e", "#7209b7", "#4895ef", "#a2d2ff"];
-
-            if (rarity === "БОЖЕСТВЕННЫЙ") colors.unshift("#ffb703");
-            if (rarity === "Эпический") colors.unshift("#e04545");
-
-            let html = '';
-            for (let i = 1; i <= 9; i++) {
-                let rand = seededRandom(id * i * 4);
-                let color = rand > 0.4 ? colors[Math.floor(rand * colors.length)] : "#141416";
-                html += `<div class="pixel" style="background: ${color}"></div>`;
-            }
-            return html;
-        }
-
-        // Генерация 1000 уникальных историй на основе ID покемона
-        function generateCreatureLore(p) {
-            let baseSize = p.rarity === "БОЖЕСТВЕННЫЙ" ? 3.5 : p.rarity === "Эпический" ? 2.1 : p.rarity === "Редкий" ? 1.2 : 0.4;
-            let randomModifier = seededRandom(p.id * 11);
-            let height = (baseSize + (randomModifier * 1.5)).toFixed(2);
-            let weight = ((baseSize * baseSize * 25) + (randomModifier * 200)).toFixed(1);
-
-            let habitat = "", description = "";
-
-            if (p.element.includes("Огонь")) {
-                habitat = "🌋 Жерла действующих вулканов, глубины тектонических разломов и заброшенные доменные печи.";
-                description = `Существо по имени ${p.name} рождено из первородной плазмы. Живя в экстремальном тепле, оно способно катализировать лаву внутри своего био-ядра.`;
-            } else if (p.element.includes("Вода")) {
-                habitat = "💧 Коралловые рифы, глубоководные впадины и затопленные неоновые туннели.";
-                description = `Монстр ${p.name} идеально приспособлен к давлению океана. Его чешуя поглощает гидро-акустические волны, делая его невидимкой для обычных радаров.`;
-            } else if (p.element.includes("Земля")) {
-                habitat = "⛰️ Заброшенные изумрудные шахты, вековые чащи и подземные лабиринты.";
-                description = `Древний обитатель суши ${p.name} обладает телом из кремниевых соединений. Оно буквально сливается с горными породами и питается редкими минералами.`;
-            } else if (p.element.includes("Воздух")) {
-                habitat = "💨 Вершины заоблачных пиков, эпицентры ураганов и слои стратосферы.";
-                description = `Газообразная форма жизни ${p.name} парит на магнитных подушках. Оно способно преобразовывать атмосферное давление в мощные кинетические заряды.`;
-            }
-
-            let сюжетныйИндекс = Math.floor(seededRandom(p.id * 45) * 5);
-            let истории = [
-                ` Согласно архивным хроникам, этот экземпляр под номером #${p.id} был зафиксирован во время великого сдвига плит. Местные легенды гласят, что появление особи предвещает резкую смену погоды в округе.`,
-                ` Исследователи Ink zoo отмечают, что у данной особи уникальная структура ДНК. Будучи в чине "${p.name.split(' ').pop()}", существо руководит небольшими стаями своего вида и координирует их миграцию.`,
-                ` Данный представитель расы примечателен тем, что в детстве перенес сильную энергетическую мутацию. Это развило в нем невероятную тягу к маскировке — оно часами может неподвижно выслеживать добычу.`,
-                ` Старейшины называют этого монстра Хранителем Очага. Архивы подтверждают, что #${p.id} обладает редким даром эмпатии и способно предупреждать других лесных обитателей о приближении уличных сканеров.`,
-                ` Невероятно гордый и независимый экземпляр. Из-за своего статуса звания оно никогда не вступает в бой первым, предпочитая ослеплять противника яркой вспышкой накопленной био-энергии.`
-            ];
-
-            return {
-                height: height + " м",
-                weight: weight > 1000 ? (weight / 1000).toFixed(2) + " т" : weight + " кг",
-                habitat: habitat,
-                description: description + истории[сюжетныйИндекс]
-            };
-        }
-
-        function generatePokedex() {
-            let list = [];
-            for (let i = 1; i <= 1000; i++) {
-                let r1 = seededRandom(i * 3); let r2 = seededRandom(i * 7); let r3 = seededRandom(i * 13); let r4 = seededRandom(i * 19);
-                let elem = elements[Math.floor(r1 * elements.length)];
-                let baseName = prefixes[Math.floor(r2 * prefixes.length)] + roots[Math.floor(r3 * roots.length)];
-                let ability = abilities[Math.floor(r1 * abilities.length)];
-                
-                let rarity, chance, title;
-                if (i <= 500) { rarity = "Обычный"; chance = 0.120; title = titlesOrdinary[Math.floor(r4 * titlesOrdinary.length)]; }
-                else if (i <= 850) { rarity = "Редкий"; chance = 0.085; title = titlesRare[Math.floor(r4 * titlesRare.length)]; }
-                else if (i <= 970) { rarity = "Эпический"; chance = 0.066; title = titlesEpic[Math.floor(r4 * titlesEpic.length)]; }
-                else { rarity = "БОЖЕСТВЕННЫЙ"; chance = 0.066; title = titlesDivine[Math.floor(r4 * titlesDivine.length)]; }
-
-                let fullName = `${baseName} ${title}`;
-                list.push({ id: i, name: fullName, element: elem, ability, rarity, chance_pct: chance.toFixed(3) });
-            }
-            return list;
-        }
-
-        const allCreatures = generatePokedex();
-        let myCollection = JSON.parse(localStorage.getItem('ink_zoo_permanent_bag_1000')) || [];
         let itemsToShow = 40; 
         let filteredCreatures = [];
 
@@ -421,7 +263,6 @@
             playSound('click');
             document.getElementById('fullPhotoOverlay').style.display = 'none';
         }
-
         function checkAchievements() {
             const ownedUniqueIds = new Set(myCollection.map(c => c.id));
             let counts = { "Огонь 🔥": 0, "Вода 💧": 0, "Земля ⛰️": 0, "Воздух 💨": 0 };
@@ -494,7 +335,7 @@
             document.getElementById('bag-count').innerText = ownedUniqueIds.size;
             checkAchievements();
         }
-        // Бесконечная подгрузка карточек при прокрутке страницы вниз
+
         window.addEventListener('scroll', () => {
             if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 150) {
                 if (document.getElementById('pokedex-grid').children.length < filteredCreatures.length) {
@@ -502,17 +343,6 @@
                 }
             }
         });
-
-        // Переключение фильтров и вкладок стихий
-        function filterElement(elementName, btnElement) {
-            playSound('click');
-            currentFilter = elementName;
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
-            updateFilteredList();
-            renderGrid(false);
-            window.scrollTo({ top: 0 });
-        }
 
         // АНАЛИЗАТОР ЦВЕТА С КАМЕРЫ (Считывает пиксели и определяет доминирующую стихию)
         function analyzeDominantElement() {
@@ -551,7 +381,6 @@
             }
         }
 
-        // Вычисление расстояния по GPS (в метрах)
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -563,7 +392,6 @@
             return R * c;
         }
 
-        // СНЯТИЕ И ФИКСАЦИЯ СНИМКА С КАМЕРЫ (Превращает кадр в строку Base64)
         function takeSnapshot() {
             const video = document.getElementById('camera-view');
             const snapCanvas = document.getElementById('snapshot-canvas');
@@ -576,7 +404,6 @@
                 return null;
             }
         }
-
         // РЕАЛЬНЫЙ СКАНИРУЮЩИЙ ДВИЖОК: АНАЛИЗ ЦВЕТА + СНИМОК КАДРА + GPS + АВТОЗАКРЫТИЕ
         async function triggerCapture() {
             const video = document.getElementById('camera-view');
@@ -694,27 +521,20 @@
             }, 2500);
         }
 
-        function removePhotoFromCard(id) {
-            playSound('click');
-            myCollection = myCollection.map(item => {
-                if (item.id === id) {
-                    delete item.photoData;
-                }
-                return item;
-            });
-            localStorage.setItem('ink_zoo_permanent_bag_1000', JSON.stringify(myCollection));
-            openModal(id);
-        }
-
         function resetCollection() {
             playSound('click');
             if (confirm("Выпустить всех существ из зоопарка и обнулить фотографии?")) {
                 myCollection = [];
                 localStorage.removeItem('ink_zoo_permanent_bag_1000');
-document.getElementById('status').innerText = "Все существа отпущены на волю!";
-updateFilteredList();
-renderGrid(false);
-}
-}
-updateFilteredList();
-renderGrid(false);
+                document.getElementById('status').innerText = "Все существа отпущены на волю!";
+                updateFilteredList();
+                renderGrid(false);
+            }
+        }
+
+        updateFilteredList();
+        renderGrid(false);
+    </script>
+</body>
+</html>
+
