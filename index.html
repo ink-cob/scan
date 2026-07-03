@@ -21,13 +21,12 @@
         .top-bar.collapsed .collapsible-content { display: none; }
         
         .control-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; width: 100%; justify-content: flex-end; }
-
         /* БЛОК ДОСТИЖЕНИЙ (5 НАГРАД) */
         .achievements-box { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; justify-content: center; margin-top: 5px; border-top: 1px solid #29292e; padding-top: 10px; }
         .medal { background: #141416; border: 1px solid #29292e; padding: 6px 12px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; gap: 6px; opacity: 0.25; transition: 0.2s; color: #a8a8b3; font-weight: bold; }
         .medal.unlocked { opacity: 1; background: #202024; border-color: #ffb703; color: #ffb703; box-shadow: 0 0 8px rgba(255,183,3,0.2); }
         
-        /* Кнопки с аппаратным ускорением для исключения залипаний */
+        /* Кнопки с營аппаратным ускорением для исключения залипаний */
         button { background: #04d361; color: #fff; border: none; padding: 10px 18px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.1s ease; transform: translateZ(0); }
         button:hover { background: #06b955; }
         button:disabled { background: #494950; cursor: not-allowed; }
@@ -61,7 +60,6 @@
         .rarity-Эпический { border-color: #7209b7; }
         .rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 8px rgba(255,183,3,0.3); }
         .card.owned.rarity-БОЖЕСТВЕННЫЙ { border-color: #ffb703; box-shadow: 0 0 12px #ffb703; animation: pulse 2s infinite; }
-
         @keyframes pulse {
             0% { box-shadow: 0 0 5px #ffb703; }
             50% { box-shadow: 0 0 15px #ffb703; }
@@ -119,24 +117,24 @@
 </head>
 <body>
 
-    <!-- СКЛАДНАЯ ВЕРХНЯЯ ПАНЕЛЬ С УПРАВЛЕНИЕМ -->
+    <!-- СКЛАДНАЯ ВЕРХНЯЯ ПАНЕЛЬ -->
     <div id="topBar" class="top-bar">
         <div class="top-controls">
             <div class="title-group">
                 <h1>🛰️ Ink zoo 1000</h1>
-                <p>Все ошибки устранены. Кликните по иконке покемона, чтобы открыть её!</p>
+                <p>Добавлены звуки и GPS-сканер аномалий! Выходи на улицу ради редких бонусов!</p>
             </div>
             <button id="toggleBtn" class="toggle-btn" onclick="togglePanel()">▲ СВЕРНУТЬ</button>
         </div>
         
         <div class="collapsible-content">
-            <!-- БЛОК ДОСТИЖЕНИЙ (5 НАГРАД) -->
+            <!-- БЛОК ДОСТИЖЕНИЙ -->
             <div class="achievements-box">
-                <div id="medal-fire" class="medal">🔥 Повелитель <br>Пламени</div>
-                <div id="medal-water" class="medal">💧 Магистр <br>Глубин</div>
-                <div id="medal-earth" class="medal">⛰️ Хранитель <br>Гор</div>
-                <div id="medal-air" class="medal">💨 Владыка <br>Небес</div>
-                <div id="medal-all" class="medal">🏆 Легенда <br>Ink zoo</div>
+                <div id="medal-fire" class="medal">🔥 Повелитель Пламени</div>
+                <div id="medal-water" class="medal">💧 Магистр Глубин</div>
+                <div id="medal-earth" class="medal">⛰️ Хранитель Гор</div>
+                <div id="medal-air" class="medal">💨 Владыка Небес</div>
+                <div id="medal-all" class="medal">🏆 Легенда Ink zoo</div>
             </div>
 
             <div class="control-buttons">
@@ -161,10 +159,10 @@
         </div>
     </div>
 
-    <!-- РЕЗИНОВАЯ СЕТКА СУЩЕСТВ -->
+    <!-- СЕТКА СУЩЕСТВ -->
     <div id="pokedex-grid" class="pokedex-grid"></div>
 
-    <!-- ИСПРАВЛЕННОЕ МОДАЛЬНОЕ ОКНО ПРОСМОТРА КАРТОЧКИ -->
+    <!-- ВСПЛЫВАЮЩЕЕ ОКНО ПРОСМОТРА КАРТОЧКИ -->
     <div id="modalOverlay" class="modal-overlay" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <span class="modal-close" onclick="closeModal()">&times;</span>
@@ -172,13 +170,11 @@
             <div id="modalAvatarBox" class="modal-avatar"></div>
             <h2 id="modalName" class="modal-name"></h2>
             
-            <!-- Место для отображения реального кадра поимки -->
             <div class="modal-photo-container">
                 <img id="modalPhotoImg" class="modal-photo-img" src="" alt="Кадр поимки">
                 <div id="modalPhotoPlaceholder" class="modal-photo-placeholder"></div>
             </div>
             
-            <!-- Контейнер, который вызывал ошибку в консоли браузера, теперь на месте -->
             <div id="modalInfoBlock" class="modal-info"></div>
         </div>
     </div>
@@ -204,7 +200,6 @@
             }
         }
 
-        // ЗВУКОВОЙ СИНТЕЗАТОР СИСТЕМЫ СТИХИЙ (SFX)
         function playSound(type) {
             initAudio();
             if (!audioCtx) return;
@@ -281,7 +276,6 @@
             return html;
         }
 
-        // АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ ЛОРА И БИО-МЕТРИК
         function generateCreatureLore(p) {
             let baseSize = p.rarity === "БОЖЕСТВЕННЫЙ" ? 3.5 : p.rarity === "Эпический" ? 2.1 : p.rarity === "Редкий" ? 1.2 : 0.4;
             let randomModifier = seededRandom(p.id * 11);
@@ -348,20 +342,18 @@
             return myCollection.filter(item => item.id === id).length;
         }
 
-        // Функция детального просмотра карточки с выводом реального сохраненного фотокадра
+        // Полностью исправленная автономная функция детального просмотра карточки
         function openModal(id) {
             playSound('click');
             const p = allCreatures.find(item => item.id === id);
             const copiesCount = getCopiesCount(id);
             const lore = generateCreatureLore(p);
 
-            // Находим первое пойманное существо этого вида в коллекции
             const firstCaught = myCollection.find(item => item.id === id);
             
             const imgEl = document.getElementById('modalPhotoImg');
             const placeholderEl = document.getElementById('modalPhotoPlaceholder');
 
-            // Проверяем, есть ли у карточки вшитый фотоснимок с камеры
             if (firstCaught && firstCaught.photoData) {
                 imgEl.src = firstCaught.photoData;
                 imgEl.style.display = "block";
@@ -374,23 +366,22 @@
                     : "🔒 Карточка заблокирована. Поймайте существо на камеру, чтобы сохранить его реальный снимок!";
             }
 
-            // Вывод геолокации GPS уличной аномалии
             let locHTML = "<span style='color: #a8a8b3;'>🏡 Домашняя зона</span>";
             if (firstCaught && firstCaught.lat && firstCaught.lon) {
                 const mapURL = `https://google.com{firstCaught.lat},${firstCaught.lon}`;
                 locHTML = `<a href="${mapURL}" target="_blank" style="color: #00b4d8; text-decoration: underline;">Посмотреть на карте (🌐 GPS)</a>`;
             }
 
-            // Заполняем текстовые данные в модальном окне
             document.getElementById('modalName').innerText = p.name;
-            document.getElementById('modalStatus').innerHTML = copiesCount > 0 ? '<span style="color:#04d361">✅ В ЗООПАРКЕ</span>' : '<span style="color:#7c7c8a">🔒 ДИКОЕ СУЩЕСТВО</span>';
-            document.getElementById('modalElement').innerText = p.element;
-            document.getElementById('modalAbility').innerText = p.ability;
-            document.getElementById('modalChance').innerText = p.chance_pct + '%';
-            document.getElementById('modalCopies').innerText = copiesCount;
-            document.getElementById('modalId').innerText = '#' + p.id;
             
+            // Заполняем ВСЮ информацию строго внутрь одного главного блока, защищая от ошибок 404/null
             document.getElementById('modalInfoBlock').innerHTML = `
+                <div>Статус: <b>${copiesCount > 0 ? 'В ЗООПАРКЕ' : '🔒 ДИКИЙ'}</b></div>
+                <div>Стихия: <b>${p.element}</b></div>
+                <div>Способность: <b>${p.ability}</b></div>
+                <div>Базовый шанс поимки: <b>${p.chance_pct}%</b></div>
+                <div>Поймано копий: <b>${copiesCount}</b></div>
+                <div>Уникальный ID: <b>#${p.id}</b></div>
                 <div>Рост существа: <b>${lore.height}</b></div>
                 <div>Вес существа: <b>${lore.weight}</b></div>
                 <div>📍 Место поимки: <b>${locHTML}</b></div>
@@ -434,8 +425,10 @@
 
             medals.forEach(m => {
                 const el = document.getElementById(m.id);
-                if (m.cond) el.classList.add('unlocked');
-                else el.classList.remove('unlocked');
+                if (el) {
+                    if (m.cond) el.classList.add('unlocked');
+                    else el.classList.remove('unlocked');
+                }
             });
         }
 
@@ -493,7 +486,7 @@
             }
         });
 
-        // Переключение фильтров и вкладок
+        // Переключение фильтров и вкладок стихий
         function filterElement(elementName, btnElement) {
             playSound('click');
             currentFilter = elementName;
@@ -504,7 +497,7 @@
             window.scrollTo({ top: 0 });
         }
 
-        // АНАЛИЗАТОР ЦВЕТА С КАМЕРЫ (Определяет доминирующую стихию)
+        // АНАЛИЗАТОР ЦВЕТА С КАМЕРЫ (Считывает пиксели и определяет доминирующую стихию)
         function analyzeDominantElement() {
             const video = document.getElementById('camera-view');
             const canvas = document.getElementById('analysis-canvas');
@@ -541,7 +534,7 @@
             }
         }
 
-        // Расчет расстояния по GPS (в метрах)
+        // Вычисление расстояния по GPS (в метрах)
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -553,23 +546,21 @@
             return R * c;
         }
 
-        // СНЯТИЕ И ФИКСАЦИЯ СНИМКА С КАМЕРЫ (Превращает кадр в текст Base64)
+        // СНЯТИЕ И ФИКСАЦИЯ СНИМКА С КАМЕРЫ (Превращает кадр в строку Base64)
         function takeSnapshot() {
             const video = document.getElementById('camera-view');
             const snapCanvas = document.getElementById('snapshot-canvas');
             const snapCtx = snapCanvas.getContext('2d');
             
             try {
-                // Рисуем текущий кадр с камеры на скрытый фото-холст
                 snapCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
-                // Сжимаем его в компактную строчку Jpeg
                 return snapCanvas.toDataURL('image/jpeg', 0.6); 
             } catch (e) {
                 return null;
             }
         }
 
-        // РЕАЛЬНЫЙ СКАНИРУЮЩИЙ ДВИЖОК: АНАЛИЗ ЦВЕТА + СНИМОК КАДРА + GPS
+        // РЕАЛЬНЫЙ СКАНИРУЮЩИЙ ДВИЖОК: АНАЛИЗ ЦВЕТА + СНИМОК КАДРА + GPS + АВТОЗАКРЫТИЕ
         async function triggerCapture() {
             const video = document.getElementById('camera-view');
             const status = document.getElementById('status');
@@ -578,7 +569,6 @@
             btn.disabled = true;
             playSound('click');
 
-            // Опрашиваем геопозицию
             let isStreetAnomaly = false;
             let currentLat = null, currentLon = null;
             try {
@@ -599,7 +589,6 @@
                 }
             } catch (e) {}
             
-            // Включаем видеопоток
             try {
                 if (!video.srcObject) {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -644,12 +633,12 @@
                 let caught = pool[Math.floor(Math.random() * pool.length)];
                 const isNew = !myCollection.some(item => item.id === caught.id);
                 
-                // Создаем полную копию существа для рюкзака и вшиваем уникальные уличные мета-данные
+                // Вшиваем фотографию и геопозицию прямо в объект рюкзака
                 let caughtCopy = {
                     ...caught,
                     lat: currentLat,
                     lon: currentLon,
-                    photoData: photoBase64 // ВШИВАЕМ ФОТОКАДР ПРЯМО ВНУТРЬ КАРТОЧКИ ЭТОГО СУЩЕСТВА!
+                    photoData: photoBase64 
                 };
 
                 myCollection.push(caughtCopy);
@@ -669,7 +658,7 @@
                 renderGrid(false);
                 btn.disabled = false;
                 
-                // Закрываем и гасим видеопоток камеры
+                // Автоматическое закрытие и полное отключение камеры
                 video.classList.remove('scanning');
                 if (video.srcObject) {
                     video.srcObject.getTracks().forEach(track => track.stop());
