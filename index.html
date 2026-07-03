@@ -180,6 +180,12 @@
         const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль", "трон", "морф", "корн", "цеце"];
         const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация", "Гравитация", "Ментальный шторм", "Сверхновая", "Лавовый плевок", "Песчаная буря", "Звуковой удар", "Ледяной луч"];
 
+        // Новые базы крутых титулов вместо скучных цифр
+        const titlesOrdinary = ["Младший", "Дикий", "Лесной", "Быстрый", "Малый", "Хитрый", "Озорной", "Пятнистый", "Степной", "Речной"];
+        const titlesRare = ["Свирепый", "Охотник", "Ночной", "Грозный", "Теневой", "Искатель", "Следопыт", "Тайный", "Штормовой", "Бродяга"];
+        const titlesEpic = ["Лорд", "Герцог", "Страж", "Рыцарь", "Магистр", "Принц", "Барон", "Ткач Заклинаний", "Паладин", "Алхимик"];
+        const titlesDivine = ["Бессмертный", "Разрушитель", "Избранный", "Древний", "Создатель Миров", "Вечный", "Владыка Хаоса", "Абсолют", "Титан Времени", "Хранитель Вселенной"];
+
         let currentFilter = 'all';
 
         function togglePanel() {
@@ -199,7 +205,6 @@
             return x - Math.floor(x);
         }
 
-        // Окрашивание аватарок строго в цвета преобладающей стихии
         function generateAvatarHTML(id, element, rarity) {
             let colors = [];
             if (element.includes("Огонь")) {
@@ -223,34 +228,50 @@
             }
             return html;
         }
-
-        // Построение базы данных Ink zoo на 1000 существ
+        // Функция сборки базы данных Ink zoo с текстовыми титулами
         function generatePokedex() {
             let list = [];
             for (let i = 1; i <= 1000; i++) {
                 let r1 = seededRandom(i * 3);
                 let r2 = seededRandom(i * 7);
                 let r3 = seededRandom(i * 13);
+                let r4 = seededRandom(i * 19); // Дополнительный рандом для титула
                 
                 let elem = elements[Math.floor(r1 * elements.length)];
-                let name = prefixes[Math.floor(r2 * prefixes.length)] + roots[Math.floor(r3 * roots.length)] + "-" + i;
+                let baseName = prefixes[Math.floor(r2 * prefixes.length)] + roots[Math.floor(r3 * roots.length)];
                 let ability = abilities[Math.floor(r1 * abilities.length)];
                 
-                let rarity, chance;
-                // Распределение: 500 Обычных, 350 Редких, 120 Эпических, 30 Божественных
-                if (i <= 500) { rarity = "Обычный"; chance = 0.120; }
-                else if (i <= 850) { rarity = "Редкий"; chance = 0.085; }
-                else if (i <= 970) { rarity = "Эпический"; chance = 0.066; }
-                else { rarity = "БОЖЕСТВЕННЫЙ"; chance = 0.066; }
+                let rarity, chance, title;
+                // Распределение 1000 существ с выдачей уникального текстового звания
+                if (i <= 500) { 
+                    rarity = "Обычный"; 
+                    chance = 0.120;
+                    title = titlesOrdinary[Math.floor(r4 * titlesOrdinary.length)];
+                } else if (i <= 850) { 
+                    rarity = "Редкий"; 
+                    chance = 0.085;
+                    title = titlesRare[Math.floor(r4 * titlesRare.length)];
+                } else if (i <= 970) { 
+                    rarity = "Эпический"; 
+                    chance = 0.066;
+                    title = titlesEpic[Math.floor(r4 * titlesEpic.length)];
+                } else { 
+                    rarity = "БОЖЕСТВЕННЫЙ"; 
+                    chance = 0.066;
+                    title = titlesDivine[Math.floor(r4 * titlesDivine.length)];
+                }
 
-                list.push({ id: i, name, element: elem, ability, rarity, chance_pct: chance.toFixed(3) });
+                // Объединяем основу имени и титул в красивую строку
+                let fullName = `${baseName} ${title}`;
+
+                list.push({ id: i, name: fullName, element: elem, ability, rarity, chance_pct: chance.toFixed(3) });
             }
             return list;
         }
 
         const allCreatures = generatePokedex();
         let myCollection = JSON.parse(localStorage.getItem('ink_zoo_permanent_bag_1000')) || [];
-        let itemsToShow = 40; 
+
         let filteredCreatures = [];
 
         function getCopiesCount(id) {
