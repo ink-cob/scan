@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ink zoo 1000 — Потоковый Анализатор</title>
+    <title>Ink zoo 1000 — Уличный Сканер</title>
     <style>
         /* Базовые настройки резинового экрана */
         * { box-sizing: border-box; }
@@ -45,13 +45,12 @@
         .counter-badge { background: #29292e; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 13px; border: 1px solid #323238; text-align: center; }
         .status-box { font-style: italic; color: #a8a8b3; padding: 10px; border-radius: 6px; background: #141416; min-width: 180px; font-size: 12px; text-align: center; flex: 1; }
         
-        /* ЕСТЕСТВЕННАЯ НЕ-ЗЕРКАЛЬНАЯ КАМЕРА С ДИНАМИЧЕСКИМ РАЗМЕРОМ */
+        /* НЕ-ЗЕРКАЛЬНАЯ КАМЕРА С ДИНАМИЧЕСКИМ РАЗМЕРОМ */
         #camera-view { width: 140px; height: 95px; display: none; background: #000; border-radius: 6px; object-fit: cover; border: 2px solid #04d361; transition: width 0.4s ease, height 0.4s ease, max-width 0.4s ease; }
         #camera-view.scanning { width: 100%; max-width: 320px; height: 200px; }
         
         /* Сетка и карточки */
         .pokedex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(100px + 3vw), 1fr)); gap: 6px; width: 100%; padding-bottom: 20px; }
-        
         .card { background: #1e1e24; border: 1px solid #29292e; border-radius: 6px; padding: 6px; position: relative; opacity: 0.2; font-size: 11px; display: flex; flex-direction: column; gap: 1px; width: 100%; align-items: center; text-align: center; cursor: pointer; transform: translateZ(0); will-change: transform, opacity; height: 145px; }
         .card:hover { border-color: #555; }
         .card.owned { opacity: 1; background: #202024; border-width: 2px; }
@@ -90,7 +89,7 @@
         .modal-close:hover { color: #fff; }
         
         .modal-avatar { width: 120px; height: 120px; border-radius: 10px; display: flex; flex-wrap: wrap; overflow: hidden; padding: 4px; background: #141416; border: 2px solid #29292e; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 5px; }
-        .modal-avatar .pixel { width: 33.33%; height: 33.33%; }
+        .modal-avatar .pixel { width: 33.33%; height: 33.33%;.pixel }
         
         .modal-name { font-size: 22px; font-weight: bold; color: #fff; margin: 0; }
         .modal-info { background: #141416; padding: 12px; border-radius: 8px; width: 100%; text-align: left; font-size: 14px; display: flex; flex-direction: column; gap: 6px; border: 1px solid #29292e; }
@@ -118,7 +117,7 @@
         <div class="top-controls">
             <div class="title-group">
                 <h1>🛰️ Ink zoo 1000</h1>
-                <p>Залипания устранены! Бесконечно ловит по цвету камеры, пока не нажмете СТОП.</p>
+                <p>Добавлены звуки и GPS-сканер аномалий! Выходи на улицу ради редких бонусов!</p>
             </div>
             <button id="toggleBtn" class="toggle-btn" onclick="togglePanel()">▲ СВЕРНУТЬ</button>
         </div>
@@ -182,15 +181,73 @@
         const roots = ["завр", "линг", "дог", "винг", "попот", "раптор", "мандер", "бро", "рекс", "стелла", "титан", "вульф", "клон", "лорд", "сфинкс", "кракен", "дракон", "феникс", "грифон", "элементаль", "трон", "морф", "корн", "цеце"];
         const abilities = ["Огненный смерч", "Абсолютный ноль", "Землетрясение", "Удар молнии", "Вызов цунами", "Каменный щит", "Вакуумный взрыв", "Кипящий гейзер", "Телепортация", "Гравитация", "Ментальный шторм", "Сверхновая", "Лавовый плевок", "Песчаная буря", "Звуковой удар", "Ледяной луч"];
 
-        // Базы крутых титулов для замены скучных цифр
         const titlesOrdinary = ["Младший", "Дикий", "Лесной", "Быстрый", "Малый", "Хитрый", "Озорной", "Пятнистый", "Степной", "Речной"];
         const titlesRare = ["Свирепый", "Охотник", "Ночной", "Грозный", "Теневой", "Искатель", "Следопыт", "Тайный", "Штормовой", "Бродяга"];
         const titlesEpic = ["Лорд", "Герцог", "Страж", "Рыцарь", "Магистр", "Принц", "Барон", "Ткач Заклинаний", "Паладин", "Алхимик"];
         const titlesDivine = ["Бессмертный", "Разрушитель", "Избранный", "Древний", "Создатель Миров", "Вечный", "Владыка Хаоса", "Абсолют", "Титан Времени", "Хранитель Вселенной"];
 
         let currentFilter = 'all';
+        let audioCtx = null;
+        let homeCoords = null; // Домашняя точка для уличного GPS
+
+        // Инициализация звука браузера при первом клике пользователя
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // ВСТРОЕННЫЙ СИНТЕЗАТОР ЗВУКОВЫХ ЭФФЕКТОВ (SFX)
+        function playSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                // Звук "Чпок!"
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } 
+            else if (type === 'radar') {
+                // Пульсирующий научно-фантастический радар
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.4);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } 
+            else if (type === 'victory') {
+                // Мажорный победный фанфар 🎉
+                const notes = [261.63, 329.63, 392.00, 523.25]; // Ноты до-ми-со-до
+                notes.forEach((freq, index) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.setValueAtTime(freq, now + index * 0.1);
+                    g.gain.setValueAtTime(0.2, now + index * 0.1);
+                    g.gain.exponentialRampToValueAtTime(0.01, now + index * 0.1 + 0.3);
+                    o.start(now + index * 0.1);
+                    o.stop(now + index * 0.1 + 0.3);
+                });
+            }
+        }
 
         function togglePanel() {
+            playSound('click');
             const bar = document.getElementById('topBar');
             const btn = document.getElementById('toggleBtn');
             if (bar.classList.contains('collapsed')) {
@@ -207,18 +264,12 @@
             return x - Math.floor(x);
         }
 
-        // Привязка цветов пикселей аватарок к преобладающей стихии
         function generateAvatarHTML(id, element, rarity) {
             let colors = [];
-            if (element.includes("Огонь")) {
-                colors = ["#e63946", "#ff5400", "#ff7b00", "#ff9e00"];
-            } else if (element.includes("Вода")) {
-                colors = ["#00b4d8", "#0077b6", "#90e0ef", "#03045e"];
-            } else if (element.includes("Земля")) {
-                colors = ["#2a9d8f", "#70e000", "#38b000", "#007200"];
-            } else if (element.includes("Воздух")) {
-                colors = ["#b5179e", "#7209b7", "#4895ef", "#a2d2ff"];
-            }
+            if (element.includes("Огонь")) colors = ["#e63946", "#ff5400", "#ff7b00", "#ff9e00"];
+            else if (element.includes("Вода")) colors = ["#00b4d8", "#0077b6", "#90e0ef", "#03045e"];
+            else if (element.includes("Земля")) colors = ["#2a9d8f", "#70e000", "#38b000", "#007200"];
+            else if (element.includes("Воздух")) colors = ["#b5179e", "#7209b7", "#4895ef", "#a2d2ff"];
 
             if (rarity === "БОЖЕСТВЕННЫЙ") colors.unshift("#ffb703");
             if (rarity === "Эпический") colors.unshift("#e04545");
@@ -232,7 +283,6 @@
             return html;
         }
 
-        // Построение базы данных Ink zoo с текстовыми титулами
         function generatePokedex() {
             let list = [];
             for (let i = 1; i <= 1000; i++) {
@@ -270,7 +320,6 @@
         let myCollection = JSON.parse(localStorage.getItem('ink_zoo_permanent_bag_1000')) || [];
         let itemsToShow = 40; 
         let filteredCreatures = [];
-        let scanInterval = null; 
 
         function getCopiesCount(id) {
             return myCollection.filter(item => item.id === id).length;
@@ -278,6 +327,7 @@
 
         // Открытие карточки просмотра
         function openModal(id) {
+            playSound('click');
             const p = allCreatures.find(item => item.id === id);
             const copiesCount = getCopiesCount(id);
 
@@ -299,7 +349,7 @@
             document.getElementById('modalOverlay').style.display = 'none';
         }
 
-        // Проверка ачивок
+        // Проверка ачивок за зачистку категорий
         function checkAchievements() {
             const ownedUniqueIds = new Set(myCollection.map(c => c.id));
             let counts = { "Огонь 🔥": 0, "Вода 💧": 0, "Земля ⛰️": 0, "Воздух 💨": 0 };
@@ -382,6 +432,7 @@
 
         // Переключение фильтров и вкладок
         function filterElement(elementName, btnElement) {
+            playSound('click');
             currentFilter = elementName;
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             btnElement.classList.add('active');
@@ -427,65 +478,54 @@
             }
         }
 
-        // ВНУТРЕННЯЯ ФУНКЦИЯ ОДНОКРАТНОЙ ЛОВЛИ ВНУТРИ ЦИКЛА
-        function executeSingleCatch() {
-            const status = document.getElementById('status');
-            let dominantElement = analyzeDominantElement();
-
-            let rarityRoll = Math.random();
-            let targetRarity;
-            
-            if (rarityRoll <= 0.02) targetRarity = "БОЖЕСТВЕННЫЙ";
-            else if (rarityRoll <= 0.10) targetRarity = "Эпический";
-            else if (rarityRoll <= 0.40) targetRarity = "Редкий";
-            else targetRarity = "Обычный";
-
-            // Фильтруем пулы по выпавшей редкости И строго по найденному цвету на камере!
-            let pool = allCreatures.filter(c => c.rarity === targetRarity && c.element === dominantElement);
-            
-            if (pool.length === 0) {
-                pool = allCreatures.filter(c => c.rarity === targetRarity);
-            }
-            
-            let caught = pool[Math.floor(Math.random() * pool.length)];
-            const isNew = !myCollection.some(item => item.id === caught.id);
-            
-            myCollection.push(caught);
-            localStorage.setItem('ink_zoo_permanent_bag_1000', JSON.stringify(myCollection));
-
-            if (isNew) {
-                status.innerHTML = `<span style="color:#04d361">🎉 Пойман новый вид:</span> <b style="color:#fff;">${caught.name}</b>!<br><small>Сканирование продолжается...</small>`;
-            } else {
-                status.innerHTML = `📡 Поймана повторка: <b style="color:#fff;">${caught.name}</b> (Всего: ${getCopiesCount(caught.id)})<br><small>Сканирование продолжается...</small>`;
-            }
-
-            updateFilteredList();
-            renderGrid(false);
+        // Вычисление расстояния между двумя точками координат (в метрах)
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Радиус Земли в метрах
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
         }
 
-        // НЕПРЕРЫВНЫЙ ДВИЖОК: АКТИВАЦИЯ И РУЧНАЯ ОСТАНОВКА ЦИКЛА ЛОВЛИ
+        // РЕАЛЬНЫЙ СКАНИРУЮЩИЙ ДВИЖОК: АНАЛИЗ ЦВЕТА + GPS БОНУС ЗА ПРОГУЛКИ
         async function triggerCapture() {
             const video = document.getElementById('camera-view');
             const status = document.getElementById('status');
             const btn = document.getElementById('hunt-btn');
             
-            if (scanInterval) {
-                clearInterval(scanInterval);
-                scanInterval = null;
-                
-                btn.innerText = "📷 ИСКАТЬ";
-                btn.style.background = "#04d361";
-                status.innerText = "🛑 Сканирование остановлено вручную.";
-                
-                video.classList.remove('scanning');
-                if (video.srcObject) {
-                    video.srcObject.getTracks().forEach(track => track.stop());
-                    video.srcObject = null;
-                    video.style.display = "none";
-                }
-                return;
-            }
+            btn.disabled = true;
+            playSound('click');
 
+            // Запрашиваем геопозицию для активации уличных бонусов
+            let isStreetAnomaly = false;
+            try {
+                if (navigator.geolocation) {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {timeout: 1500});
+                    });
+                    
+                    const currentLat = position.coords.latitude;
+                    const currentLon = position.coords.longitude;
+
+                    if (!homeCoords) {
+                        // Первое нажатие фиксирует домашнюю точку
+                        homeCoords = { lat: currentLat, lon: currentLon };
+                    } else {
+                        // Считаем, как далеко отошел игрок от дома
+                        const distance = getDistance(homeCoords.lat, homeCoords.lon, currentLat, currentLon);
+                        if (distance > 100) {
+                            isStreetAnomaly = true; // Отошел дальше 100 метров — активируем уличный бонус!
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log("Геолокация недоступна или отклонена. Работает базовый режим.");
+            }
+            
+            // Включаем видеопоток
             try {
                 if (!video.srcObject) {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -493,23 +533,81 @@
                 }
                 video.style.display = "block";
                 video.classList.add('scanning');
-                
-                btn.innerText = "🛑 СТОП";
-                btn.style.background = "#e04545";
-                status.innerHTML = "📡 Потоковый анализатор запущен...<br>Наведите камеру на нужный цвет!";
+                status.innerHTML = "📡 Идет сканирование пространства...<br>Наведите объектив на нужный цвет!";
             } catch (err) {
                 status.innerText = "❌ Ошибка доступа к камере!";
+                btn.disabled = false;
                 return;
             }
 
-            scanInterval = setInterval(() => {
-                executeSingleCatch();
+            // Запускаем пульсирующий звук радара во время сканирования
+            let radarSoundInterval = setInterval(() => playSound('radar'), 500);
+
+            setTimeout(() => {
+                clearInterval(radarSoundInterval);
+                let dominantElement = analyzeDominantElement();
+
+                let rarityRoll = Math.random();
+                let targetRarity;
+                
+                // РАСЧЕТ РЕДКОСТИ С УЧЕТОМ GPS БОНУСА НА УЛИЦЕ
+                if (isStreetAnomaly) {
+                    // На улице шанс Эпиков и Божественных возрастает в 3 раза за счет Обычных!
+                    if (rarityRoll <= 0.06) targetRarity = "БОЖЕСТВЕННЫЙ";
+                    else if (rarityRoll <= 0.30) targetRarity = "Эпический"; 
+                    else if (rarityRoll <= 0.60) targetRarity = "Редкий";
+                    else targetRarity = "Обычный";
+                } else {
+                    // Домашние базовые шансы (60% / 30% / 8% / 2%)
+                    if (rarityRoll <= 0.02) targetRarity = "БОЖЕСТВЕННЫЙ";
+                    else if (rarityRoll <= 0.10) targetRarity = "Эпический";
+                    else if (rarityRoll <= 0.40) targetRarity = "Редкий";
+                    else targetRarity = "Обычный";
+                }
+
+                // Фильтруем пулы по выпавшей редкости И строго по найденному цвету кадра!
+                let pool = allCreatures.filter(c => c.rarity === targetRarity && c.element === dominantElement);
+                if (pool.length === 0) pool = allCreatures.filter(c => c.rarity === targetRarity);
+                
+                let caught = pool[Math.floor(Math.random() * pool.length)];
+                const isNew = !myCollection.some(item => item.id === caught.id);
+                
+                myCollection.push(caught);
+                localStorage.setItem('ink_zoo_permanent_bag_1000', JSON.stringify(myCollection));
+
+                // Звуковой фанфар на редкие уловы
+                if (targetRarity !== "Обычный") {
+                    playSound('victory');
+                } else {
+                    playSound('click');
+                }
+
+                // Вывод сообщения на экран
+                let streetTag = isStreetAnomaly ? "<br><b style='color:#ffb703'>🚀 Сработал GPS-бонус уличной аномалии!</b>" : "<br><small style='color:#a8a8b3'>🏠 Домашний режим. Отойдите от дома на 100м для уличного бонуса.</small>";
+                if (isNew) {
+                    status.innerHTML = `<span style="color:#04d361">🎉 Пойман новый вид:</span> <b style="color:#fff;">${caught.name}</b>! ${streetTag}`;
+                } else {
+                    status.innerHTML = `📡 Поймана повторка: <b style="color:#fff;">${caught.name}</b> (Всего: ${getCopiesCount(caught.id)}) ${streetTag}`;
+                }
+
+                updateFilteredList();
+                renderGrid(false);
+                btn.disabled = false;
+                
+                // Автоматическое закрытие и выключение камеры
+                video.classList.remove('scanning');
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                    video.style.display = "none";
+                }
             }, 2500);
         }
 
+        // Полная очистка зоопарка
         function resetCollection() {
+            playSound('click');
             if (confirm("Выпустить всех существ из зоопарка и обнулить дубликаты?")) {
-                if(scanInterval) triggerCapture(); 
                 myCollection = [];
                 localStorage.removeItem('ink_zoo_permanent_bag_1000');
                 document.getElementById('status').innerText = "Все существа отпущены на волю!";
@@ -518,7 +616,7 @@
             }
         }
 
-        // Первый запуск
+        // Инициализация при первом старте страницы
         updateFilteredList();
         renderGrid(false);
     </script>
